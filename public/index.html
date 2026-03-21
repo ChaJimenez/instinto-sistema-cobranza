@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INSTINTO — Caja</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; min-height: 100vh; color: #1a1a1a; }
+.header { background: #1a1a1a; color: #fff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+.header h1 { font-size: 20px; font-weight: 500; letter-spacing: 0.14em; }
+.header .fecha { font-size: 12px; color: #888; }
+.sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #2d7a2d; display: inline-block; margin-left: 8px; }
+.sync-dot.off { background: #e24b4a; }
+.tabs { display: flex; background: #fff; border-bottom: 1px solid #e5e5e5; overflow-x: auto; }
+.tab { flex: 1; min-width: 72px; padding: 13px 4px; font-size: 12px; text-align: center; cursor: pointer; color: #888; border: none; background: none; white-space: nowrap; }
+.tab.active { color: #1a1a1a; border-bottom: 2px solid #1a1a1a; font-weight: 600; }
+.screen { display: none; padding: 20px; max-width: 960px; margin: 0 auto; }
+.screen.active { display: block; }
+.form-row { display: flex; gap: 10px; margin-bottom: 12px; align-items: center; }
+.form-row label { font-size: 13px; color: #666; min-width: 60px; }
+.form-row input, .form-row select { flex: 1; padding: 9px 13px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; background: #fff; color: #1a1a1a; outline: none; }
+.form-row input:focus, .form-row select:focus { border-color: #1a1a1a; }
+.sec { font-size: 11px; font-weight: 600; color: #888; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.07em; }
+.cat-tabs { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 12px; padding-bottom: 4px; scrollbar-width: none; flex-wrap: wrap; }
+.cat-tabs::-webkit-scrollbar { display: none; }
+.cat-btn { padding: 7px 14px; border-radius: 20px; border: 1px solid #ddd; font-size: 13px; cursor: pointer; white-space: nowrap; background: #fff; color: #555; }
+.cat-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+.platillos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.plato-btn { background: #fff; border: 1px solid #e8e8e8; border-radius: 10px; padding: 12px; cursor: pointer; text-align: left; transition: border-color 0.1s; }
+.plato-btn:hover { border-color: #1a1a1a; }
+.plato-btn:active { transform: scale(0.97); }
+.plato-name { font-size: 13px; font-weight: 500; line-height: 1.35; margin-bottom: 6px; }
+.plato-price { font-size: 14px; font-weight: 600; }
+.extras-section { background: #fff; border: 1px solid #e8e8e8; border-radius: 10px; padding: 12px; margin-bottom: 16px; }
+.extras-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 10px; }
+.extra-btn { padding: 8px 10px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 12px; cursor: pointer; background: #fafafa; color: #333; text-align: left; display: flex; justify-content: space-between; align-items: center; }
+.extra-btn:hover { border-color: #1a1a1a; background: #fff; }
+.extra-btn span { font-weight: 600; }
+.ticket-wrap { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+.ticket-item { padding: 9px 0; border-bottom: 1px solid #f0f0f0; }
+.ticket-item:last-child { border-bottom: none; }
+.ticket-item.cancelado { opacity: 0.4; }
+.ti-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.ti-name { flex: 1; font-size: 14px; }
+.ti-qty { display: flex; align-items: center; gap: 8px; }
+.qty-btn { background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 5px; width: 26px; height: 26px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; }
+.qty-btn:hover { background: #e8e8e8; }
+.qty-num { font-size: 14px; font-weight: 500; min-width: 20px; text-align: center; }
+.ti-price { min-width: 64px; text-align: right; font-weight: 600; font-size: 14px; }
+.ti-actions { display: flex; gap: 7px; margin-top: 7px; align-items: center; flex-wrap: wrap; }
+.ti-nota { flex: 1; min-width: 100px; font-size: 12px; padding: 5px 9px; border: 1px solid #e0e0e0; border-radius: 6px; background: #fafafa; color: #333; outline: none; }
+.ti-nota:focus { border-color: #888; }
+.ti-cortesia { font-size: 11px; padding: 4px 9px; border: 1px solid #e0e0e0; border-radius: 6px; cursor: pointer; background: none; color: #888; white-space: nowrap; }
+.ti-cortesia.on { background: #fff8ed; color: #b06800; border-color: #e8a020; font-weight: 500; }
+.cancel-item-btn { font-size: 11px; padding: 4px 8px; border: 1px solid #f5b8b8; border-radius: 6px; cursor: pointer; background: none; color: #e24b4a; white-space: nowrap; }
+.cancel-item-btn.undo { border-color: #e0e0e0; color: #888; }
+.cancel-tag { font-size: 10px; background: #fff0f0; color: #e24b4a; border: 1px solid #f5b8b8; border-radius: 10px; padding: 1px 7px; margin-left: 5px; }
+.ticket-footer { padding-top: 10px; border-top: 1px solid #e0e0e0; margin-top: 6px; }
+.ticket-line { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+.ticket-line.amber { color: #b06800; }
+.ticket-line.red { color: #e24b4a; }
+.ticket-line.green { color: #2d7a2d; }
+.ticket-total { display: flex; justify-content: space-between; font-size: 17px; font-weight: 600; margin-top: 6px; }
+.btn { width: 100%; padding: 13px; border-radius: 9px; border: none; font-size: 15px; cursor: pointer; font-weight: 500; margin-bottom: 10px; transition: all 0.15s; }
+.btn-dark { background: #1a1a1a; color: #fff; }
+.btn-dark:hover { background: #333; }
+.btn-outline { background: none; border: 1px solid #ccc; color: #333; }
+.btn-outline:hover { border-color: #1a1a1a; color: #1a1a1a; }
+.btn-danger { background: none; border: 1px solid #e24b4a; color: #e24b4a; }
+.btn-danger:hover { background: #fff5f5; }
+.btn-amber { background: none; border: 1px solid #e8a020; color: #b06800; }
+.btn-amber:hover { background: #fff8ed; }
+.btn-sm { width: auto; padding: 7px 14px; font-size: 13px; margin: 0; }
+.btn:active { transform: scale(0.98); }
+.pago-opts { display: flex; gap: 10px; margin-bottom: 14px; }
+.pago-opt { flex: 1; padding: 12px 4px; border: 1px solid #ddd; border-radius: 9px; text-align: center; cursor: pointer; font-size: 14px; background: #fff; color: #555; transition: all 0.15s; }
+.pago-opt.sel { background: #1a1a1a; color: #fff; border-color: #1a1a1a; font-weight: 500; }
+.propina-row { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
+.propina-btn { flex: 1; padding: 9px 4px; border: 1px solid #ddd; border-radius: 8px; text-align: center; cursor: pointer; font-size: 13px; background: #fff; color: #555; }
+.propina-btn.sel { background: #2d7a2d; color: #fff; border-color: #2d7a2d; font-weight: 500; }
+.propina-custom { flex: 1.2; display: flex; align-items: center; gap: 6px; }
+.propina-custom input { flex: 1; padding: 8px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; width: 100%; outline: none; }
+.comanda-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+.comanda-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.comanda-mesa { font-size: 16px; font-weight: 600; }
+.comanda-time { font-size: 12px; color: #888; margin-top: 3px; }
+.comanda-items { font-size: 13px; color: #666; margin-bottom: 8px; line-height: 1.7; }
+.comanda-total { font-size: 18px; font-weight: 600; margin-bottom: 3px; }
+.comanda-cort { font-size: 13px; color: #b06800; }
+.comanda-canc { font-size: 13px; color: #e24b4a; }
+.badge { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 500; }
+.badge-open { background: #eaf3de; color: #3b6d11; }
+.comanda-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.report-filters { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; align-items: center; }
+.report-filters select, .report-filters input[type=date] { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; background: #fff; color: #1a1a1a; outline: none; min-width: 140px; }
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.stat { background: #fff; border: 1px solid #e8e8e8; border-radius: 10px; padding: 14px; }
+.stat label { font-size: 12px; color: #888; display: block; margin-bottom: 6px; }
+.stat .val { font-size: 22px; font-weight: 600; }
+.stat .val.amber { color: #b06800; }
+.stat .val.red { color: #e24b4a; }
+.stat .val.green { color: #2d7a2d; }
+.report-table { width: 100%; border-collapse: collapse; font-size: 14px; background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid #e8e8e8; margin-bottom: 20px; }
+.report-table th { background: #f5f5f3; padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
+.report-table td { padding: 10px 14px; border-top: 1px solid #f0f0f0; }
+.report-table tr:hover td { background: #fafafa; }
+.empty { text-align: center; color: #aaa; font-size: 14px; padding: 40px 0; }
+.toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #fff; padding: 11px 22px; border-radius: 22px; font-size: 14px; opacity: 0; transition: opacity 0.25s; pointer-events: none; z-index: 9999; white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+.toast.show { opacity: 1; }
+.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 500; align-items: center; justify-content: center; }
+.modal-bg.open { display: flex; }
+.modal { background: #fff; border-radius: 16px; padding: 24px 22px; width: 100%; max-width: 460px; max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+.modal h3 { font-size: 17px; font-weight: 600; margin-bottom: 16px; }
+.pin-error { color: #e24b4a; font-size: 13px; text-align: center; margin-bottom: 10px; min-height: 18px; }
+.mesero-item { display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; background: #fff; border: 1px solid #e8e8e8; border-radius: 9px; margin-bottom: 8px; }
+.add-mesero { display: flex; gap: 10px; margin-top: 10px; }
+.add-mesero input { flex: 1; padding: 9px 13px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
+.editing-banner { background: #fff8ed; border: 1px solid #e8a020; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 13px; color: #b06800; display: none; }
+.editing-banner.show { display: block; }
+.cierre-box { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+@media (max-width: 640px) { .stat-grid { grid-template-columns: 1fr 1fr; } .screen { padding: 14px; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>INSTINTO <span class="sync-dot" id="syncDot"></span></h1>
+  <span class="fecha" id="fechaHoy"></span>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('nueva')">+ Comanda</button>
+  <button class="tab" onclick="switchTab('abiertas')">Abiertas <span id="badgeN"></span></button>
+  <button class="tab" onclick="switchTab('reporte')">Reporte</button>
+  <button class="tab" onclick="switchTab('cierre')">🔒 Cierre</button>
+  <button class="tab" onclick="switchTab('config')">Equipo</button>
+</div>
+
+<!-- NUEVA COMANDA -->
+<div id="screen-nueva" class="screen active">
+  <div id="editingBanner" class="editing-banner">✏ Editando mesa — modifica y guarda o cobra al terminar.</div>
+  <div class="form-row"><label>Mesa</label><input type="text" id="mesa" placeholder="Ej. 4 / Barra / Terraza" /></div>
+  <div class="form-row"><label>Mesero</label><select id="meseroSel"><option value="">— Selecciona —</option></select></div>
+  <br>
+  <div class="sec">Menú</div>
+  <div class="cat-tabs" id="catTabs"></div>
+  <div class="platillos-grid" id="platillosGrid"></div>
+  <div class="extras-section">
+    <div class="sec">Extras y complementos</div>
+    <div class="extras-grid" id="extrasGrid"></div>
+  </div>
+  <div class="sec">Comanda actual</div>
+  <div class="ticket-wrap" id="ticket"><div class="empty" style="padding:20px 0;">Sin platillos — toca un producto para agregar</div></div>
+  <div id="ticketFooter" style="display:none;">
+    <div class="ticket-footer">
+      <div id="ticketLines"></div>
+      <div class="ticket-total"><span>Total cobrable</span><span id="ticketTotal">$0</span></div>
+    </div>
+    <br>
+    <div class="sec">Forma de pago</div>
+    <div class="pago-opts">
+      <div class="pago-opt sel" id="pagoEfectivo" onclick="selPago(this,'Efectivo')">💵 Efectivo</div>
+      <div class="pago-opt" id="pagoTarjeta" onclick="selPago(this,'Tarjeta')">💳 Tarjeta</div>
+    </div>
+    <div id="propinaSection" style="display:none;">
+      <div class="sec">Propina (opcional)</div>
+      <div class="propina-row">
+        <div class="propina-btn" onclick="selPropina(this,10)">10%</div>
+        <div class="propina-btn" onclick="selPropina(this,15)">15%</div>
+        <div class="propina-btn" onclick="selPropina(this,20)">20%</div>
+        <div class="propina-custom"><span style="font-size:13px;color:#666;">$</span><input type="number" id="propinaCustom" placeholder="Otra" min="0" oninput="setPropinaCustom(this.value)" /></div>
+        <div class="propina-btn" onclick="selPropina(this,0)">Sin propina</div>
+      </div>
+      <div id="propinaDisplay" style="font-size:14px;color:#2d7a2d;margin-bottom:10px;font-weight:500;"></div>
+    </div>
+  </div>
+  <button class="btn btn-outline" onclick="saveComanda()">Guardar como abierta</button>
+  <button class="btn btn-dark" onclick="cobrarComanda()">Cobrar y cerrar mesa</button>
+</div>
+
+<!-- ABIERTAS -->
+<div id="screen-abiertas" class="screen"><div id="listaAbiertas"></div></div>
+
+<!-- REPORTE -->
+<div id="screen-reporte" class="screen">
+  <div class="report-filters">
+    <input type="date" id="filtroFecha" />
+    <select id="filtroMesero"><option value="">Todos los meseros</option></select>
+    <button class="btn btn-outline btn-sm" onclick="renderReporte()">Filtrar</button>
+    <button class="btn btn-outline btn-sm" onclick="exportarCorte()">📋 Copiar</button>
+  </div>
+  <div class="stat-grid" id="statsGrid"></div>
+  <div class="sec">Por forma de pago</div>
+  <table class="report-table" id="tblPago"><thead><tr><th>Método</th><th>Comandas</th><th>Venta</th><th>Propinas</th></tr></thead><tbody></tbody></table>
+  <div class="sec">Por mesero</div>
+  <table class="report-table" id="tblMesero"><thead><tr><th>Mesero</th><th>Comandas</th><th>Venta</th><th>Ticket prom.</th></tr></thead><tbody></tbody></table>
+  <div class="sec">Productos más vendidos</div>
+  <table class="report-table" id="tblProductos"><thead><tr><th>Producto</th><th>Cant.</th><th>Total</th></tr></thead><tbody></tbody></table>
+  <div class="sec">Cortesías del período</div>
+  <table class="report-table" id="tblCortesias"><thead><tr><th>Mesa</th><th>Mesero</th><th>Hora</th><th>Productos</th><th>Valor</th></tr></thead><tbody></tbody></table>
+  <div class="sec">Cancelaciones del período</div>
+  <table class="report-table" id="tblCancelaciones"><thead><tr><th>Mesa</th><th>Mesero</th><th>Hora</th><th>Productos</th><th>Valor</th></tr></thead><tbody></tbody></table>
+</div>
+
+<!-- CIERRE DEL DÍA -->
+<div id="screen-cierre" class="screen">
+  <div class="cierre-box" style="margin-bottom:16px;">
+    <div class="sec">Turno del mesero</div>
+    <p style="font-size:14px;color:#555;margin-bottom:14px;line-height:1.6;">Registra apertura y cierre de turno por mesero. Las mesas abiertas siempre quedan activas.</p>
+    <div class="form-row" style="margin-bottom:14px;">
+      <label>Mesero</label>
+      <select id="cierreMeseroSel"><option value="">— Selecciona —</option></select>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:14px;">
+      <button class="btn btn-outline" style="margin:0;" onclick="abrirTurno()">🟢 Abrir turno</button>
+      <button class="btn btn-dark" style="margin:0;" onclick="verCierreParcial()">Ver / cerrar turno</button>
+    </div>
+    <div id="turnoStatus" style="font-size:13px;color:#888;margin-bottom:8px;"></div>
+    <div id="cierreParcialResumen">
+      <div id="cierreParcialStats"></div>
+      <div id="cierreParcialDetalle"></div>
+      <div id="cierreParcialBtns" style="display:none;margin-top:10px;">
+        <button class="btn btn-dark" onclick="descargarCierreParcial()">⬇ Descargar reporte de turno</button>
+      </div>
+    </div>
+  </div>
+  <div class="cierre-box">
+    <div class="sec">Cierre total del día</div>
+    <p style="font-size:14px;color:#555;margin-bottom:16px;line-height:1.6;">Genera el reporte final del día. Las mesas abiertas quedan pendientes — no se cancelan.</p>
+    <div id="cierreResumen" style="margin-bottom:16px;"></div>
+    <button class="btn btn-danger" onclick="iniciarCierre()">🔒 Ejecutar cierre del día</button>
+  </div>
+</div>
+
+<!-- CONFIG -->
+<div id="screen-config" class="screen">
+  <div class="sec">Meseros registrados</div>
+  <div id="meserosList"></div>
+  <div class="add-mesero">
+    <input type="text" id="nuevoMesero" placeholder="Nombre del mesero" onkeydown="if(event.key==='Enter')agregarMesero()" />
+    <button class="btn btn-dark btn-sm" onclick="agregarMesero()">Agregar</button>
+  </div>
+  <br><br>
+  <div class="sec">Respaldo de datos</div>
+  <p style="font-size:13px;color:#888;margin-bottom:12px;">Exporta todos los datos para migración o respaldo. Importa el JSON del sistema anterior.</p>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <button class="btn btn-outline btn-sm" onclick="exportarBackup()">⬇ Exportar backup JSON</button>
+    <button class="btn btn-outline btn-sm" onclick="pedirPin('Importar datos','Esta acción carga datos del sistema anterior. Requiere autorización.',()=>document.getElementById(\'fileImport\').click())">⬆ Importar backup</button>
+    <input type="file" id="fileImport" accept=".json" style="display:none;" onchange="importarBackup(this)" />
+  </div>
+</div>
+
+<!-- MODAL: cobrar comanda abierta -->
+<div class="modal-bg" id="modalCobrar">
+  <div class="modal">
+    <h3 id="modalTitle">Cobrar mesa</h3>
+    <div id="modalItems"></div>
+    <div id="modalCortesias" style="font-size:13px;color:#b06800;margin:5px 0;"></div>
+    <div id="modalCancelados" style="font-size:13px;color:#e24b4a;margin:5px 0;"></div>
+    <div class="ticket-footer" style="margin-bottom:14px;">
+      <div id="modalLines"></div>
+      <div class="ticket-total"><span>Total cobrable</span><span id="modalTotal"></span></div>
+    </div>
+    <div class="sec">Forma de pago</div>
+    <div class="pago-opts" style="margin-bottom:14px;">
+      <div class="pago-opt sel" onclick="selPagoModal(this,'Efectivo')">💵 Efectivo</div>
+      <div class="pago-opt" onclick="selPagoModal(this,'Tarjeta')">💳 Tarjeta</div>
+    </div>
+    <div id="modalPropinaSection" style="display:none;margin-bottom:14px;">
+      <div class="sec">Propina</div>
+      <div class="propina-row">
+        <div class="propina-btn" onclick="selPropinaModal(this,10)">10%</div>
+        <div class="propina-btn" onclick="selPropinaModal(this,15)">15%</div>
+        <div class="propina-btn" onclick="selPropinaModal(this,20)">20%</div>
+        <div class="propina-custom"><span style="font-size:13px;color:#666;">$</span><input type="number" id="propinaModalCustom" placeholder="Otra" min="0" oninput="setPropinaModalCustom(this.value)" /></div>
+        <div class="propina-btn" onclick="selPropinaModal(this,0)">Sin propina</div>
+      </div>
+      <div id="propinaModalDisplay" style="font-size:14px;color:#2d7a2d;font-weight:500;margin-top:6px;"></div>
+    </div>
+    <div id="modalAuthSection" style="display:none;">
+      <div style="background:#fff8ed;border:1px solid #e8a020;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#b06800;">
+        ⚠ Esta cuenta tiene cortesías o cancelaciones. Se requiere autorización del administrador.
+      </div>
+      <div class="sec">Contraseña de autorización</div>
+      <input type="password" id="modalPin" placeholder="Contraseña" style="width:100%;padding:10px 13px;border:1px solid #ddd;border-radius:8px;font-size:16px;outline:none;margin-bottom:8px;letter-spacing:0.15em;" onkeydown="if(event.key==='Enter')confirmarCobro()" />
+      <div id="modalPinError" class="pin-error"></div>
+    </div>
+    <button class="btn btn-dark" onclick="confirmarCobro()">✓ Confirmar cobro</button>
+    <button class="btn btn-outline" onclick="imprimirCuentaPrevia()" style="border-color:#1a1a1a;color:#1a1a1a;">🖨 Imprimir cuenta (sin cobrar)</button>
+    <button class="btn btn-outline" onclick="cerrarModal('modalCobrar')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL: PIN genérico -->
+<div class="modal-bg" id="modalPinGenerico">
+  <div class="modal" style="max-width:340px;">
+    <h3 id="pinModalTitle">Autorización requerida</h3>
+    <p id="pinModalDesc" style="font-size:14px;color:#555;margin-bottom:16px;"></p>
+    <input type="password" id="pinInputField" placeholder="Contraseña" style="width:100%;padding:12px 14px;border:2px solid #ddd;border-radius:10px;font-size:18px;text-align:center;letter-spacing:0.2em;outline:none;margin-bottom:8px;" onkeydown="if(event.key==='Enter')submitPin()" />
+    <div id="pinError" class="pin-error"></div>
+    <button class="btn btn-dark" onclick="submitPin()">Continuar</button>
+    <button class="btn btn-outline" onclick="cerrarModal('modalPinGenerico')">Cancelar</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIGURACIÓN ──
+const PIN = '1234';
+const PRINT_SERVER = 'http://127.0.0.1:3000';
+
+const MENU = {
+  "Hamburguesas":[{n:"Cheeseburger Clásica",p:95},{n:"Doble Doble",p:128},{n:"Hamburguesa con Tocino",p:158},{n:"Crispy Chicken Hot Honey",p:148},{n:"Vegetariana",p:138}],
+  "Snacks":[{n:"Papas Fritas",p:58},{n:"Bastones de Camote",p:58},{n:"Papas con Salsa Queso y Tocino",p:88},{n:"Mac & Cheese tipo NY",p:98},{n:"Chicharrón Carnoso",p:88},{n:"Parmesan Grilled Cheese",p:89}],
+  "Postres":[{n:"Cheesecake Clásico",p:125},{n:"Fried Oreos",p:95}],
+  "Combos":[{n:"Burger + Papas + Refresco",p:158}],
+  "Refrescos":[{n:"Agua",p:45},{n:"Soda Casera",p:45},{n:"Coca Cola Familiar",p:55},{n:"Agua Mineral Zifón",p:45}],
+  "Cervezas":[{n:"Corona",p:60},{n:"Victoria",p:60},{n:"Pacífico",p:60},{n:"Modelo Especial",p:75},{n:"Negra Modelo",p:80},{n:"Michelob Ultra",p:80},{n:"Stella Artois",p:80},{n:"Corona Familiar",p:165},{n:"Victoria Familiar",p:165}],
+  "Preparados":[{n:"Michelada / Cubana",p:40},{n:"Clamato Preparado",p:80}]
+};
+const EXTRAS=[{n:"Crispy onions",p:35},{n:"Extra carne",p:55},{n:"Puré de papa",p:35},{n:"Aguacate",p:55},{n:"Tocino extra",p:35},{n:"Chicharrón carnoso",p:50}];
+
+// ── ESTADO EN MEMORIA ──
+let currentItems=[], currentPago="Efectivo", editandoId=null, currentPropina=0;
+let comandas=[], ventas=[], meseros=[], cancelaciones=[];
+let modalPago="Efectivo", modalIdx=null, modalPropina=0;
+let pinCallback=null;
+let ultimaActualizacion=0;
+
+// ── CAPA DE DATOS (API) ──
+async function cargarDatos(){
+  try {
+    const r = await fetch('/api/datos');
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d = await r.json();
+    comandas = d.cmd || [];
+    ventas = d.vta || [];
+    meseros = d.mes || [];
+    cancelaciones = d.canc || [];
+    setSyncDot(true);
+  } catch(e) {
+    // Fallback localStorage si la API no responde
+    try{comandas=JSON.parse(localStorage.getItem('i_cmd')||'[]');}catch(e2){}
+    try{ventas=JSON.parse(localStorage.getItem('i_vta')||'[]');}catch(e2){}
+    try{meseros=JSON.parse(localStorage.getItem('i_mes')||'[]');}catch(e2){}
+    try{cancelaciones=JSON.parse(localStorage.getItem('i_canc')||'[]');}catch(e2){}
+    setSyncDot(false);
+    console.warn('API no disponible, usando localStorage:', e.message);
+  }
+}
+
+async function guardar(){
+  try {
+    await fetch('/api/guardar',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({cmd:comandas,vta:ventas,mes:meseros,canc:cancelaciones})
+    });
+    setSyncDot(true);
+  } catch(e) {
+    // Fallback localStorage
+    try{
+      localStorage.setItem('i_cmd',JSON.stringify(comandas));
+      localStorage.setItem('i_vta',JSON.stringify(ventas));
+      localStorage.setItem('i_mes',JSON.stringify(meseros));
+      localStorage.setItem('i_canc',JSON.stringify(cancelaciones));
+    }catch(e2){}
+    setSyncDot(false);
+    console.warn('Error al guardar en API:', e.message);
+  }
+}
+
+// ── SYNC EN TIEMPO REAL (polling 3s) ──
+function setSyncDot(on){
+  const d=document.getElementById('syncDot');
+  if(d) d.className='sync-dot'+(on?'':' off');
+}
+
+setInterval(async()=>{
+  try{
+    const r=await fetch('/api/lastUpdate');
+    const{ts}=await r.json();
+    if(ts>ultimaActualizacion&&ultimaActualizacion>0){
+      ultimaActualizacion=ts;
+      await cargarDatos();
+      renderAbiertas();
+      renderMeseroSelect();
+      document.getElementById('badgeN').textContent=comandas.filter(c=>c.estado==='abierta').length?`(${comandas.filter(c=>c.estado==='abierta').length})`:'';
+    } else if(ultimaActualizacion===0){
+      ultimaActualizacion=ts||Date.now();
+    }
+    setSyncDot(true);
+  }catch(e){setSyncDot(false);}
+},3000);
+
+// ── BACKUP / IMPORTACIÓN ──
+function exportarBackup(){
+  const data=JSON.stringify({cmd:comandas,vta:ventas,mes:meseros,canc:cancelaciones},null,2);
+  const blob=new Blob([data],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`instinto_backup_${new Date().toISOString().slice(0,10)}.json`;a.click();
+  URL.revokeObjectURL(url);
+  toast('Backup descargado ✓');
+}
+
+async function importarBackup(input){
+  const file=input.files[0];if(!file)return;
+  try{
+    const text=await file.text();
+    const data=JSON.parse(text);
+    const r=await fetch('/api/importar',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({pin:PIN,cmd:data.cmd||[],vta:data.vta||[],mes:data.mes||[],canc:data.canc||[]})
+    });
+    const result=await r.json();
+    if(!r.ok)throw new Error(result.error||'Error al importar');
+    await cargarDatos();
+    renderMeseroConfig();renderMeseroSelect();renderAbiertas();
+    toast(`Importado: ${result.importados.cmd} comandas, ${result.importados.vta} ventas, ${result.importados.mes} meseros ✓`);
+  }catch(e){
+    toast('Error al importar: '+e.message);
+  }
+  input.value='';
+}
+
+// ── PIN ──
+function pedirPin(titulo, desc, callback){
+  pinCallback=callback;
+  document.getElementById('pinModalTitle').textContent=titulo;
+  document.getElementById('pinModalDesc').textContent=desc;
+  document.getElementById('pinInputField').value='';
+  document.getElementById('pinError').textContent='';
+  document.getElementById('modalPinGenerico').classList.add('open');
+  setTimeout(()=>document.getElementById('pinInputField').focus(),100);
+}
+function submitPin(){
+  const val=document.getElementById('pinInputField').value;
+  if(val!==PIN){
+    document.getElementById('pinError').textContent='Contraseña incorrecta';
+    document.getElementById('pinInputField').value='';
+    document.getElementById('pinInputField').focus();
+    return;
+  }
+  cerrarModal('modalPinGenerico');
+  if(pinCallback){pinCallback();pinCallback=null;}
+}
+
+// ── MENU ──
+function initMenu(){
+  const ct=document.getElementById('catTabs');
+  Object.keys(MENU).forEach((cat,i)=>{
+    const b=document.createElement('button');
+    b.className='cat-btn'+(i===0?' active':'');
+    b.textContent=cat;
+    b.onclick=()=>{document.querySelectorAll('.cat-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderPlatillos(cat);};
+    ct.appendChild(b);
+  });
+  renderPlatillos(Object.keys(MENU)[0]);
+  renderExtras();
+  renderMeseroSelect();
+}
+function renderPlatillos(cat){
+  document.getElementById('platillosGrid').innerHTML=MENU[cat].map(item=>
+    `<button class="plato-btn" onclick='addItem(${JSON.stringify(item.n)},${item.p})'><div class="plato-name">${item.n}</div><div class="plato-price">$${item.p}</div></button>`
+  ).join('');
+}
+function renderExtras(){
+  document.getElementById('extrasGrid').innerHTML=EXTRAS.map(ex=>
+    `<button class="extra-btn" onclick='addItem(${JSON.stringify("+"+ex.n)},${ex.p})'><span style="font-weight:400;color:#555;">${ex.n}</span><span>+$${ex.p}</span></button>`
+  ).join('');
+}
+function renderMeseroSelect(){
+  ['meseroSel','filtroMesero'].forEach(id=>{
+    const sel=document.getElementById(id);if(!sel)return;
+    const val=sel.value;
+    sel.innerHTML=id==='meseroSel'?'<option value="">— Selecciona —</option>':'<option value="">Todos los meseros</option>';
+    meseros.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;if(m===val)o.selected=true;sel.appendChild(o);});
+  });
+}
+
+// ── ITEMS ──
+function addItem(nombre,precio){
+  const ex=currentItems.find(it=>it.n===nombre&&!it.cancelado);
+  if(ex){ex.q++;}else{currentItems.push({n:nombre,p:precio,q:1,nota:'',cortesia:false,cancelado:false});}
+  renderTicket();toast(nombre.replace('+','')+' ✓');
+}
+function changeQty(idx,delta){
+  const it=currentItems[idx];if(it.cancelado)return;
+  it.q+=delta;
+  if(it.q<=0){currentItems.splice(idx,1);}
+  renderTicket();
+}
+function toggleCancelItem(idx){
+  const it=currentItems[idx];
+  if(!it.cancelado&&it.cortesia){
+    pedirPin('Autorización requerida','Se requiere contraseña para cancelar un ítem con cortesía.',()=>{it.cancelado=true;renderTicket();});
+    return;
+  }
+  it.cancelado=!it.cancelado;
+  renderTicket();
+}
+function toggleCortesia(idx){
+  const it=currentItems[idx];
+  if(!it.cortesia){
+    pedirPin('Autorización requerida','Se requiere contraseña para aplicar cortesía.',()=>{it.cortesia=true;renderTicket();});
+  } else {
+    it.cortesia=false;renderTicket();
+  }
+}
+function updateNota(idx,val){if(currentItems[idx])currentItems[idx].nota=val;}
+
+function renderTicket(){
+  const ticket=document.getElementById('ticket');
+  const footer=document.getElementById('ticketFooter');
+  if(!currentItems.length){ticket.innerHTML='<div class="empty" style="padding:20px 0;">Sin platillos — toca un producto para agregar</div>';footer.style.display='none';return;}
+  footer.style.display='block';
+  let cobrable=0,cort=0,canc=0;
+  ticket.innerHTML=currentItems.map((it,i)=>{
+    const bruto=it.p*it.q;
+    if(it.cancelado)canc+=bruto;else if(it.cortesia)cort+=bruto;else cobrable+=bruto;
+    const cancelTag=it.cancelado?'<span class="cancel-tag">cancelado</span>':'';
+    const cortLabel=(!it.cancelado&&it.cortesia)?` <span style="font-size:10px;background:#fff8ed;color:#b06800;padding:1px 6px;border-radius:10px;border:1px solid #e8a020;">★ cortesía</span>`:'';
+    const precio=it.cancelado?`<span style="text-decoration:line-through;color:#ccc;">$${bruto.toLocaleString()}</span>`:it.cortesia?'<span style="color:#b06800;font-weight:600;">$0</span>':`$${bruto.toLocaleString()}`;
+    return`<div class="ticket-item${it.cancelado?' cancelado':''}">
+      <div class="ti-top">
+        <span class="ti-name">${it.n}${cancelTag}${cortLabel}</span>
+        <span class="ti-qty">${!it.cancelado?`<button class="qty-btn" onclick="changeQty(${i},-1)">−</button><span class="qty-num">${it.q}</span><button class="qty-btn" onclick="changeQty(${i},1)">+</button>`:`<span class="qty-num" style="color:#ccc;">${it.q}</span>`}</span>
+        <span class="ti-price">${precio}</span>
+      </div>
+      <div class="ti-actions">
+        ${!it.cancelado?`<input class="ti-nota" type="text" placeholder="Nota: sin cebolla..." value="${it.nota}" onchange="updateNota(${i},this.value)" />`:'<span style="font-size:12px;color:#aaa;flex:1;">—</span>'}
+        ${!it.cancelado?`<button class="ti-cortesia${it.cortesia?' on':''}" onclick="toggleCortesia(${i})">${it.cortesia?'★ Cort.':'☆ Cort.'}</button>`:''}
+        <button class="cancel-item-btn${it.cancelado?' undo':''}" onclick="toggleCancelItem(${i})">${it.cancelado?'↩ Restaurar':'✕ Cancelar'}</button>
+      </div>
+    </div>`;
+  }).join('');
+  const propDisplay=currentPago==='Tarjeta'&&currentPropina>0?`<div class="ticket-line green"><span>🎁 Propina</span><span>$${currentPropina.toLocaleString()}</span></div>`:'';
+  document.getElementById('ticketLines').innerHTML=
+    (cort>0?`<div class="ticket-line amber"><span>★ Cortesías</span><span>$${cort.toLocaleString()}</span></div>`:'')+
+    (canc>0?`<div class="ticket-line red"><span>✕ Cancelados</span><span>$${canc.toLocaleString()}</span></div>`:'')+
+    propDisplay;
+  document.getElementById('ticketTotal').textContent='$'+cobrable.toLocaleString();
+}
+
+function totales(){
+  let cobrable=0,cort=0,canc=0;
+  currentItems.forEach(it=>{const v=it.p*it.q;if(it.cancelado)canc+=v;else if(it.cortesia)cort+=v;else cobrable+=v;});
+  return{cobrable,cort,canc};
+}
+
+// ── PAGO ──
+function selPago(el,tipo){
+  document.querySelectorAll('#screen-nueva .pago-opt').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');currentPago=tipo;
+  currentPropina=0;
+  document.getElementById('propinaSection').style.display=tipo==='Tarjeta'?'block':'none';
+  document.getElementById('propinaCustom').value='';
+  document.querySelectorAll('#screen-nueva .propina-btn').forEach(b=>b.classList.remove('sel'));
+  renderTicket();
+}
+function selPropina(el,pct){
+  document.querySelectorAll('#screen-nueva .propina-btn').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');
+  document.getElementById('propinaCustom').value='';
+  const base=totales().cobrable;
+  currentPropina=pct>0?Math.round(base*pct/100):0;
+  document.getElementById('propinaDisplay').textContent=currentPropina>0?`Propina: $${currentPropina.toLocaleString()} (${pct}%)`:'Sin propina';
+  renderTicket();
+}
+function setPropinaCustom(val){
+  document.querySelectorAll('#screen-nueva .propina-btn').forEach(b=>b.classList.remove('sel'));
+  currentPropina=parseFloat(val)||0;
+  document.getElementById('propinaDisplay').textContent=currentPropina>0?`Propina: $${currentPropina.toLocaleString()}`:'';
+  renderTicket();
+}
+
+// ── IMPRESIÓN ──
+function imprimirBrowser(venta){
+  const activos=venta.items.filter(it=>!it.cancelado);
+  const filas=activos.map(it=>{
+    const precio=it.cortesia?'<span style="color:#b06800;">CORTESÍA</span>':'$'+(it.p*it.q).toLocaleString();
+    const nota=it.nota?`<div style="font-size:11px;color:#888;margin-top:2px;">${it.nota}</div>`:'';
+    return`<tr><td style="padding:5px 0;">${it.q}× ${it.n}${nota}</td><td style="text-align:right;padding:5px 0;font-weight:600;">${precio}</td></tr>`;
+  }).join('');
+  const propina=venta.propina>0?`<tr><td style="padding:5px 0;color:#2d7a2d;">Propina</td><td style="text-align:right;padding:5px 0;color:#2d7a2d;font-weight:600;">$${venta.propina.toLocaleString()}</td></tr>`:'';
+  const cort=(venta.cortesias||0)>0?`<tr><td style="padding:5px 0;color:#b06800;">Cortesías</td><td style="text-align:right;padding:5px 0;color:#b06800;font-weight:600;">$${venta.cortesias.toLocaleString()}</td></tr>`:'';
+  const pagoLine=venta.pago?`<tr><td style="padding:5px 0;color:#555;">Forma de pago</td><td style="text-align:right;padding:5px 0;color:#555;">${venta.pago}</td></tr>`:'';
+  const titulo=venta.preview?'CUENTA':'TICKET';
+  const win=window.open('','_blank','width=320,height=600');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${titulo}</title>
+  <style>body{font-family:monospace;font-size:13px;margin:0;padding:16px;max-width:300px;}h2{text-align:center;font-size:18px;letter-spacing:0.15em;margin-bottom:4px;}.sub{text-align:center;font-size:12px;color:#555;margin-bottom:12px;}hr{border:none;border-top:1px dashed #aaa;margin:10px 0;}table{width:100%;border-collapse:collapse;}.total-row td{font-size:16px;font-weight:700;padding-top:8px;}.pie{text-align:center;font-size:11px;color:#aaa;margin-top:14px;}@media print{body{margin:0;padding:8px;}}</style>
+  </head><body>
+  <h2>INSTINTO</h2>
+  <div class="sub">Mesa ${venta.mesa} · ${venta.mesero}<br>${venta.fecha} ${venta.hora}</div>
+  <hr><table>${filas}</table><hr>
+  <table>${cort}${pagoLine}${propina}<tr class="total-row"><td>TOTAL</td><td style="text-align:right;">$${venta.total.toLocaleString()}</td></tr></table>
+  <div class="pie">${venta.preview?'— cuenta previa, pendiente de cobro —':'¡Gracias por su visita!'}</div>
+  <script>window.onload=()=>{window.print();}<\/script></body></html>`);
+  win.document.close();
+}
+
+async function imprimirCuentaPrevia(){
+  const c=comandas.find(x=>x.id===modalIdx);if(!c)return;
+  const preview={mesa:c.mesa,mesero:c.mesero,hora:c.hora,fecha:c.fecha||new Date().toLocaleDateString('es-MX'),items:c.items,total:c.total,cortesias:c.cortesias||0,pago:'',propina:0,preview:true};
+  imprimirBrowser(preview);
+  imprimirTicket({...preview}).catch(()=>{});
+}
+
+function imprimirCuentaMesa(id){
+  const c=comandas.find(x=>x.id===id);if(!c)return;
+  imprimirBrowser({...c,preview:true,pago:'',propina:0});
+}
+
+async function imprimirTicket(venta){
+  try{
+    const resp=await fetch(PRINT_SERVER+'/imprimir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mesa:venta.mesa,mesero:venta.mesero,hora:venta.hora,fecha:venta.fecha||new Date().toLocaleDateString('es-MX'),items:venta.items,total:venta.total,cortesias:venta.cortesias||0,pago:venta.pago||'',propina:venta.propina||0,preview:venta.preview||false})});
+    const r=await resp.json();
+    if(r.ok)toast('🖨 Ticket impreso ✓');
+  }catch(e){}
+}
+
+// ── VALIDAR / GUARDAR ──
+function tieneRestriccion(){return currentItems.some(it=>it.cortesia||it.cancelado);}
+function validar(){
+  if(!document.getElementById('mesa').value.trim()){toast('⚠ Indica la mesa');return false;}
+  if(!document.getElementById('meseroSel').value){toast('⚠ Selecciona un mesero');return false;}
+  if(!currentItems.filter(it=>!it.cancelado).length){toast('⚠ Agrega al menos un producto');return false;}
+  return true;
+}
+
+function saveComanda(){
+  if(!validar())return;
+  const doSave=()=>{
+    guardarCancelacionesItems();
+    comandas.push(buildComanda('abierta'));
+    editandoId=null;guardar();resetForm();toast('Comanda guardada ✓');switchTab('abiertas');
+  };
+  if(tieneRestriccion()){pedirPin('Autorización requerida','Esta comanda tiene cortesías o cancelaciones.',doSave);}
+  else{doSave();}
+}
+
+function cobrarComanda(){
+  if(!validar())return;
+  const doCobrar=()=>{
+    guardarCancelacionesItems();
+    const c={...buildComanda('cerrada'),pago:currentPago,propina:currentPropina};
+    ventas.push(c);editandoId=null;guardar();
+    imprimirTicket(c);
+    resetForm();toast('Venta registrada ✓');switchTab('reporte');
+  };
+  if(tieneRestriccion()){pedirPin('Autorización requerida','Esta cuenta tiene cortesías o cancelaciones.',doCobrar);}
+  else{doCobrar();}
+}
+
+function buildComanda(estado){
+  const t=totales();
+  return{id:editandoId||Date.now(),mesa:document.getElementById('mesa').value.trim(),mesero:document.getElementById('meseroSel').value,items:JSON.parse(JSON.stringify(currentItems)),total:t.cobrable,cortesias:t.cort,cancelados:t.canc,propina:currentPropina,hora:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),fecha:new Date().toLocaleDateString('es-MX'),estado};
+}
+
+function guardarCancelacionesItems(){
+  const mesa=document.getElementById('mesa').value.trim();
+  const mesero=document.getElementById('meseroSel').value;
+  const cancelados=currentItems.filter(it=>it.cancelado);
+  if(cancelados.length){cancelaciones.push({id:Date.now(),mesa,mesero,items:JSON.parse(JSON.stringify(cancelados)),valor:cancelados.reduce((s,it)=>s+it.p*it.q,0),hora:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),fecha:new Date().toLocaleDateString('es-MX')});}
+}
+
+function resetForm(){
+  document.getElementById('mesa').value='';document.getElementById('meseroSel').value='';
+  currentItems=[];currentPago='Efectivo';currentPropina=0;editandoId=null;
+  document.querySelectorAll('#screen-nueva .pago-opt').forEach((e,i)=>e.classList.toggle('sel',i===0));
+  document.getElementById('propinaSection').style.display='none';
+  document.getElementById('propinaDisplay').textContent='';
+  document.getElementById('editingBanner').classList.remove('show');
+  renderTicket();
+}
+
+// ── ABIERTAS ──
+function renderAbiertas(){
+  const cont=document.getElementById('listaAbiertas');
+  const ab=comandas.filter(c=>c.estado==='abierta');
+  document.getElementById('badgeN').textContent=ab.length?`(${ab.length})`:'';
+  if(!ab.length){cont.innerHTML='<div class="empty">No hay comandas abiertas</div>';return;}
+  cont.innerHTML=ab.map(c=>{
+    const resumen=c.items.filter(it=>!it.cancelado).map(it=>{let s=`${it.q}× ${it.n}`;if(it.cortesia)s+=' ★';if(it.nota)s+=` (${it.nota})`;return s;}).join(' · ');
+    const cancItems=c.items.filter(it=>it.cancelado);
+    return`<div class="comanda-card">
+      <div class="comanda-header"><div><div class="comanda-mesa">Mesa ${c.mesa} — ${c.mesero}</div><div class="comanda-time">${c.hora}</div></div><span class="badge badge-open">Abierta</span></div>
+      <div class="comanda-items">${resumen||'—'}</div>
+      <div class="comanda-total">$${c.total.toLocaleString()}</div>
+      ${c.cortesias>0?`<div class="comanda-cort">★ Cortesías: $${c.cortesias.toLocaleString()}</div>`:''}
+      ${cancItems.length?`<div class="comanda-canc">✕ Cancelados: ${cancItems.map(it=>it.n).join(', ')}</div>`:''}
+      <div class="comanda-actions">
+        <button class="btn btn-outline btn-sm" onclick="editarComanda(${c.id})">✏ Editar</button>
+        <button class="btn btn-outline btn-sm" onclick="imprimirCuentaMesa(${c.id})" style="border-color:#1a1a1a;color:#1a1a1a;">🖨 Cuenta</button>
+        <button class="btn btn-dark btn-sm" onclick="abrirCobro(${c.id})">Cobrar</button>
+        <button class="btn btn-danger btn-sm" onclick="cancelarComandaCompleta(${c.id})">Cancelar mesa</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function editarComanda(id){
+  const idx=comandas.findIndex(x=>x.id===id);if(idx<0)return;
+  const c=comandas[idx];
+  document.getElementById('mesa').value=c.mesa;renderMeseroSelect();document.getElementById('meseroSel').value=c.mesero;
+  currentItems=JSON.parse(JSON.stringify(c.items));currentPago='Efectivo';currentPropina=0;editandoId=id;
+  comandas.splice(idx,1);guardar();renderTicket();
+  document.getElementById('editingBanner').classList.add('show');
+  switchTab('nueva');toast('Editando mesa '+c.mesa);
+}
+
+function cancelarComandaCompleta(id){
+  const c=comandas.find(x=>x.id===id);if(!c)return;
+  if(!confirm(`¿Cancelar TODA la mesa ${c.mesa}? Se registra pero NO se cobra.`))return;
+  cancelaciones.push({id:Date.now(),mesa:c.mesa,mesero:c.mesero,items:JSON.parse(JSON.stringify(c.items.filter(it=>!it.cancelado))),valor:c.total,hora:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),fecha:new Date().toLocaleDateString('es-MX'),tipo:'mesa_completa'});
+  comandas=comandas.filter(x=>x.id!==id);guardar();renderAbiertas();toast('Mesa cancelada — registrada en reporte ✓');
+}
+
+// ── COBRO MODAL ──
+function abrirCobro(id){
+  const c=comandas.find(x=>x.id===id);if(!c)return;
+  modalIdx=id;modalPropina=0;
+  document.getElementById('modalTitle').textContent=`Mesa ${c.mesa} — ${c.mesero}`;
+  const activos=c.items.filter(it=>!it.cancelado);
+  document.getElementById('modalItems').innerHTML=activos.map(it=>{
+    const label=it.cortesia?`<span style="color:#b06800;">★ ${it.n}</span>`:it.n;
+    const nota=it.nota?`<div style="font-size:11px;color:#888;">${it.nota}</div>`:'';
+    const precio=it.cortesia?'<span style="color:#b06800;">$0</span>':'$'+(it.p*it.q).toLocaleString();
+    return`<div class="ticket-item"><div class="ti-top"><span class="ti-name" style="font-size:13px;">${it.q}× ${label}${nota}</span><span class="ti-price">${precio}</span></div></div>`;
+  }).join('');
+  document.getElementById('modalCortesias').textContent=c.cortesias>0?`★ Cortesías: $${c.cortesias.toLocaleString()}`:'';
+  const cancItems=c.items.filter(it=>it.cancelado);
+  document.getElementById('modalCancelados').textContent=cancItems.length?`✕ Cancelados: ${cancItems.map(it=>it.n).join(', ')}`:'';
+  document.getElementById('modalTotal').textContent='$'+c.total.toLocaleString();
+  document.getElementById('modalLines').innerHTML='';
+  modalPago='Efectivo';
+  document.querySelectorAll('#modalCobrar .pago-opt').forEach((e,i)=>e.classList.toggle('sel',i===0));
+  document.getElementById('modalPropinaSection').style.display='none';
+  document.getElementById('modalPin').value='';document.getElementById('modalPinError').textContent='';
+  const necesitaPin=c.cortesias>0||cancItems.length>0;
+  document.getElementById('modalAuthSection').style.display=necesitaPin?'block':'none';
+  document.getElementById('modalCobrar').classList.add('open');
+}
+function selPagoModal(el,tipo){
+  document.querySelectorAll('#modalCobrar .pago-opt').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');modalPago=tipo;modalPropina=0;
+  document.getElementById('modalPropinaSection').style.display=tipo==='Tarjeta'?'block':'none';
+  document.getElementById('propinaModalDisplay').textContent='';
+  document.getElementById('propinaModalCustom').value='';
+  document.querySelectorAll('#modalCobrar .propina-btn').forEach(b=>b.classList.remove('sel'));
+  actualizarModalLines();
+}
+function selPropinaModal(el,pct){
+  document.querySelectorAll('#modalCobrar .propina-btn').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');document.getElementById('propinaModalCustom').value='';
+  const c=comandas.find(x=>x.id===modalIdx);
+  modalPropina=pct>0?Math.round((c?c.total:0)*pct/100):0;
+  document.getElementById('propinaModalDisplay').textContent=modalPropina>0?`Propina: $${modalPropina.toLocaleString()} (${pct}%)`:'Sin propina';
+  actualizarModalLines();
+}
+function setPropinaModalCustom(val){
+  document.querySelectorAll('#modalCobrar .propina-btn').forEach(b=>b.classList.remove('sel'));
+  modalPropina=parseFloat(val)||0;
+  document.getElementById('propinaModalDisplay').textContent=modalPropina>0?`Propina: $${modalPropina.toLocaleString()}`:'';
+  actualizarModalLines();
+}
+function actualizarModalLines(){
+  document.getElementById('modalLines').innerHTML=modalPropina>0?`<div class="ticket-line green"><span>🎁 Propina</span><span>$${modalPropina.toLocaleString()}</span></div>`:'';
+}
+function confirmarCobro(){
+  const idx=comandas.findIndex(x=>x.id===modalIdx);if(idx<0)return;
+  const c=comandas[idx];
+  const necesitaPin=c.cortesias>0||c.items.some(it=>it.cancelado);
+  if(necesitaPin){
+    const pin=document.getElementById('modalPin').value;
+    if(pin!==PIN){document.getElementById('modalPinError').textContent='Contraseña incorrecta';document.getElementById('modalPin').value='';return;}
+  }
+  const cancItems=c.items.filter(it=>it.cancelado);
+  if(cancItems.length){cancelaciones.push({id:Date.now(),mesa:c.mesa,mesero:c.mesero,items:JSON.parse(JSON.stringify(cancItems)),valor:cancItems.reduce((s,it)=>s+it.p*it.q,0),hora:c.hora,fecha:c.fecha||new Date().toLocaleDateString('es-MX')});}
+  const venta={...c,pago:modalPago,propina:modalPropina,estado:'cerrada'};
+  ventas.push(venta);comandas.splice(idx,1);
+  guardar();imprimirTicket(venta);
+  cerrarModal('modalCobrar');renderAbiertas();toast('Cobrado ✓');
+}
+function cerrarModal(id){document.getElementById(id).classList.remove('open');}
+
+// ── REPORTE ──
+function renderReporte(){
+  const fechaFiltro=document.getElementById('filtroFecha').value;
+  const meseroFiltro=document.getElementById('filtroMesero').value;
+  const fmtFecha=(ts)=>new Date(ts).toLocaleDateString('es-MX');
+  const matchFecha=(v)=>{if(!fechaFiltro)return true;return fmtFecha(v.id)===new Date(fechaFiltro+'T12:00:00').toLocaleDateString('es-MX');};
+  const matchMesero=(v)=>!meseroFiltro||v.mesero===meseroFiltro;
+  const vFilt=ventas.filter(v=>matchFecha(v)&&matchMesero(v));
+  const cFilt=cancelaciones.filter(c=>matchFecha(c)&&(!meseroFiltro||c.mesero===meseroFiltro));
+  const total=vFilt.reduce((s,v)=>s+v.total,0);
+  const cortTotal=vFilt.reduce((s,v)=>s+(v.cortesias||0),0);
+  const propTotal=vFilt.reduce((s,v)=>s+(v.propina||0),0);
+  const cancTotal=cFilt.reduce((s,c)=>s+c.valor,0);
+  const ticket=vFilt.length?Math.round(total/vFilt.length):0;
+  document.getElementById('statsGrid').innerHTML=`
+    <div class="stat"><label>Venta total</label><div class="val">$${total.toLocaleString()}</div></div>
+    <div class="stat"><label>Comandas</label><div class="val">${vFilt.length}</div></div>
+    <div class="stat"><label>Ticket promedio</label><div class="val">$${ticket.toLocaleString()}</div></div>
+    <div class="stat"><label>Propinas</label><div class="val green">$${propTotal.toLocaleString()}</div></div>
+    <div class="stat"><label>Cortesías</label><div class="val amber">$${cortTotal.toLocaleString()}</div></div>
+    <div class="stat"><label>Cancelaciones</label><div class="val red">$${cancTotal.toLocaleString()}</div></div>
+  `;
+  const metodos={};
+  vFilt.forEach(v=>{if(!metodos[v.pago])metodos[v.pago]={n:0,t:0,p:0};metodos[v.pago].n++;metodos[v.pago].t+=v.total;metodos[v.pago].p+=(v.propina||0);});
+  document.getElementById('tblPago').querySelector('tbody').innerHTML=Object.entries(metodos).map(([m,d])=>
+    `<tr><td>${m}</td><td>${d.n}</td><td>$${d.t.toLocaleString()}</td><td style="color:#2d7a2d;">$${d.p.toLocaleString()}</td></tr>`
+  ).join('')||'<tr><td colspan="4" style="color:#aaa;text-align:center;padding:14px;">Sin datos</td></tr>';
+  const xMes={};
+  vFilt.forEach(v=>{if(!xMes[v.mesero])xMes[v.mesero]={n:0,t:0};xMes[v.mesero].n++;xMes[v.mesero].t+=v.total;});
+  document.getElementById('tblMesero').querySelector('tbody').innerHTML=Object.entries(xMes).sort((a,b)=>b[1].t-a[1].t).map(([m,d])=>
+    `<tr><td>${m}</td><td>${d.n}</td><td>$${d.t.toLocaleString()}</td><td>$${Math.round(d.t/d.n).toLocaleString()}</td></tr>`
+  ).join('')||'<tr><td colspan="4" style="color:#aaa;text-align:center;padding:14px;">Sin datos</td></tr>';
+  const prods={};
+  vFilt.forEach(v=>{v.items.filter(it=>!it.cancelado&&!it.cortesia).forEach(it=>{if(!prods[it.n])prods[it.n]={q:0,t:0};prods[it.n].q+=it.q;prods[it.n].t+=it.p*it.q;});});
+  document.getElementById('tblProductos').querySelector('tbody').innerHTML=Object.entries(prods).sort((a,b)=>b[1].q-a[1].q).map(([n,d])=>
+    `<tr><td>${n}</td><td>${d.q}</td><td>$${d.t.toLocaleString()}</td></tr>`
+  ).join('')||'<tr><td colspan="3" style="color:#aaa;text-align:center;padding:14px;">Sin datos</td></tr>';
+  const cortDet=[];
+  vFilt.forEach(v=>{const ci=v.items.filter(it=>it.cortesia);if(ci.length)cortDet.push({mesa:v.mesa,mesero:v.mesero,hora:v.hora,items:ci,valor:ci.reduce((s,it)=>s+it.p*it.q,0)});});
+  document.getElementById('tblCortesias').querySelector('tbody').innerHTML=cortDet.map(r=>
+    `<tr><td>${r.mesa}</td><td>${r.mesero}</td><td>${r.hora}</td><td>${r.items.map(it=>it.q+'× '+it.n).join(', ')}</td><td style="color:#b06800;">$${r.valor.toLocaleString()}</td></tr>`
+  ).join('')||'<tr><td colspan="5" style="color:#aaa;text-align:center;padding:14px;">Sin cortesías</td></tr>';
+  document.getElementById('tblCancelaciones').querySelector('tbody').innerHTML=cFilt.map(r=>
+    `<tr><td>${r.mesa}</td><td>${r.mesero}</td><td>${r.hora}</td><td>${r.items.map(it=>it.q+'× '+it.n).join(', ')}${r.tipo==='mesa_completa'?' <span style="color:#e24b4a;font-size:11px;">(mesa completa)</span>':''}</td><td style="color:#e24b4a;">$${r.valor.toLocaleString()}</td></tr>`
+  ).join('')||'<tr><td colspan="5" style="color:#aaa;text-align:center;padding:14px;">Sin cancelaciones</td></tr>';
+}
+
+function generarTextoCierre(fecha){
+  const hoyStr=new Date(fecha+'T12:00:00').toLocaleDateString('es-MX');
+  const vFilt=ventas.filter(v=>new Date(v.id).toLocaleDateString('es-MX')===hoyStr);
+  const cFilt=cancelaciones.filter(c=>new Date(c.id).toLocaleDateString('es-MX')===hoyStr);
+  const total=vFilt.reduce((s,v)=>s+v.total,0);
+  const propTotal=vFilt.reduce((s,v)=>s+(v.propina||0),0);
+  const cortTotal=vFilt.reduce((s,v)=>s+(v.cortesias||0),0);
+  const cancTotal=cFilt.reduce((s,c)=>s+c.valor,0);
+  const metodos={};
+  vFilt.forEach(v=>{metodos[v.pago]=(metodos[v.pago]||{n:0,t:0,p:0});metodos[v.pago].n++;metodos[v.pago].t+=v.total;metodos[v.pago].p+=(v.propina||0);});
+  const xMes={};
+  vFilt.forEach(v=>{if(!xMes[v.mesero])xMes[v.mesero]={n:0,t:0};xMes[v.mesero].n++;xMes[v.mesero].t+=v.total;});
+  const prods={};
+  vFilt.forEach(v=>{v.items.filter(it=>!it.cancelado&&!it.cortesia).forEach(it=>{if(!prods[it.n])prods[it.n]={q:0};prods[it.n].q+=it.q;});});
+  const top5=Object.entries(prods).sort((a,b)=>b[1].q-a[1].q).slice(0,5);
+  let txt=`╔══════════════════════════╗\n`;
+  txt+=`║    CIERRE INSTINTO       ║\n`;
+  txt+=`║    ${hoyStr.padEnd(22)}║\n`;
+  txt+=`╚══════════════════════════╝\n\n`;
+  txt+=`RESUMEN GENERAL\n${'─'.repeat(30)}\n`;
+  txt+=`Venta total:    $${total.toLocaleString()}\n`;
+  txt+=`Comandas:       ${vFilt.length}\n`;
+  txt+=`Ticket prom.:   $${vFilt.length?Math.round(total/vFilt.length).toLocaleString():0}\n`;
+  if(propTotal>0)txt+=`Propinas:       $${propTotal.toLocaleString()}\n`;
+  if(cortTotal>0)txt+=`Cortesías:      $${cortTotal.toLocaleString()}\n`;
+  if(cancTotal>0)txt+=`Cancelaciones:  $${cancTotal.toLocaleString()}\n`;
+  txt+=`\nPOR FORMA DE PAGO\n${'─'.repeat(30)}\n`;
+  Object.entries(metodos).forEach(([m,d])=>{txt+=`${m}: $${d.t.toLocaleString()} (${d.n} cmd${d.p>0?' + prop $'+d.p.toLocaleString():''})\n`;});
+  txt+=`\nPOR MESERO\n${'─'.repeat(30)}\n`;
+  Object.entries(xMes).sort((a,b)=>b[1].t-a[1].t).forEach(([m,d])=>{txt+=`${m}: $${d.t.toLocaleString()} (${d.n} cmd)\n`;});
+  if(top5.length){txt+=`\nTOP PRODUCTOS\n${'─'.repeat(30)}\n`;top5.forEach(([n,d])=>{txt+=`${n}: ${d.q} uds\n`;});}
+  txt+=`\n${'═'.repeat(30)}\n`;
+  return txt;
+}
+
+function exportarCorte(){
+  const fechaFiltro=document.getElementById('filtroFecha').value||new Date().toISOString().slice(0,10);
+  const txt=generarTextoCierre(fechaFiltro);
+  navigator.clipboard.writeText(txt).then(()=>toast('Resumen copiado ✓')).catch(()=>prompt('Copia este texto:',txt));
+}
+
+// ── CIERRE DEL DÍA ──
+function renderCierre(){
+  const sel=document.getElementById('cierreMeseroSel');
+  if(sel){
+    const val=sel.value;
+    sel.innerHTML='<option value="">— Selecciona —</option>';
+    meseros.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;if(m===val)o.selected=true;sel.appendChild(o);});
+  }
+  const hoy=new Date().toLocaleDateString('es-MX');
+  const vHoy=ventas.filter(v=>new Date(v.id).toLocaleDateString('es-MX')===hoy);
+  const total=vHoy.reduce((s,v)=>s+v.total,0);
+  const propTotal=vHoy.reduce((s,v)=>s+(v.propina||0),0);
+  const abiertas=comandas.filter(c=>c.estado==='abierta');
+  document.getElementById('cierreResumen').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div class="stat"><label>Venta del día</label><div class="val">$${total.toLocaleString()}</div></div>
+      <div class="stat"><label>Comandas cerradas</label><div class="val">${vHoy.length}</div></div>
+      <div class="stat"><label>Propinas</label><div class="val green">$${propTotal.toLocaleString()}</div></div>
+      <div class="stat"><label>Mesas abiertas</label><div class="val">${abiertas.length}</div></div>
+    </div>
+    ${abiertas.length>0?`<div style="background:#e6f1fb;border:1px solid #85b7eb;border-radius:8px;padding:10px 14px;font-size:13px;color:#185fa5;margin-bottom:10px;">ℹ ${abiertas.length} mesa(s) abierta(s) quedan pendientes.</div>`:''}
+  `;
+  document.getElementById('cierreParcialStats').innerHTML='';
+  document.getElementById('cierreParcialDetalle').innerHTML='';
+  document.getElementById('cierreParcialBtns').style.display='none';
+  document.getElementById('turnoStatus').textContent='';
+}
+
+function abrirTurno(){
+  const mesero=document.getElementById('cierreMeseroSel').value;
+  if(!mesero){toast('⚠ Selecciona un mesero');return;}
+  const hora=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+  try{localStorage.setItem('i_turno_'+mesero,JSON.stringify({hora,ts:Date.now()}));}catch(e){}
+  document.getElementById('turnoStatus').innerHTML=`<span style="color:#2d7a2d;font-weight:500;">🟢 Turno de ${mesero} abierto a las ${hora}</span>`;
+  document.getElementById('cierreParcialStats').innerHTML='';
+  document.getElementById('cierreParcialDetalle').innerHTML='';
+  document.getElementById('cierreParcialBtns').style.display='none';
+  toast('Turno de '+mesero+' abierto — '+hora);
+}
+
+function verCierreParcial(){
+  const mesero=document.getElementById('cierreMeseroSel').value;
+  if(!mesero){toast('⚠ Selecciona un mesero');return;}
+  const hoy=new Date().toLocaleDateString('es-MX');
+  let turnoInfo=null;
+  try{turnoInfo=JSON.parse(localStorage.getItem('i_turno_'+mesero)||'null');}catch(e){}
+  const turnoDesde=turnoInfo?turnoInfo.ts:0;
+  const vMes=ventas.filter(v=>{
+    if(new Date(v.id).toLocaleDateString('es-MX')!==hoy)return false;
+    if(v.mesero!==mesero)return false;
+    if(turnoDesde>0&&v.id<turnoDesde)return false;
+    return true;
+  });
+  const total=vMes.reduce((s,v)=>s+v.total,0);
+  const propTotal=vMes.reduce((s,v)=>s+(v.propina||0),0);
+  const cortTotal=vMes.reduce((s,v)=>s+(v.cortesias||0),0);
+  const ticket=vMes.length?Math.round(total/vMes.length):0;
+  const abMes=comandas.filter(c=>c.estado==='abierta'&&c.mesero===mesero);
+  const horaActual=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+  const turnoLabel=turnoInfo?`Turno: ${turnoInfo.hora} → ${horaActual}`:`Todo el día al ${horaActual}`;
+  document.getElementById('turnoStatus').innerHTML=`<span style="color:#555;">${turnoLabel}</span>`;
+  document.getElementById('cierreParcialStats').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div class="stat"><label>Venta del turno</label><div class="val">$${total.toLocaleString()}</div></div>
+      <div class="stat"><label>Comandas cobradas</label><div class="val">${vMes.length}</div></div>
+      <div class="stat"><label>Propinas</label><div class="val green">$${propTotal.toLocaleString()}</div></div>
+      <div class="stat"><label>Ticket promedio</label><div class="val">$${ticket.toLocaleString()}</div></div>
+      ${cortTotal>0?`<div class="stat"><label>Cortesías</label><div class="val amber">$${cortTotal.toLocaleString()}</div></div>`:''}
+    </div>
+    ${abMes.length>0?`<div style="background:#e6f1fb;border:1px solid #85b7eb;border-radius:8px;padding:10px 14px;font-size:13px;color:#185fa5;margin-bottom:10px;">ℹ Mesas de ${mesero} que siguen abiertas: ${abMes.map(c=>'Mesa '+c.mesa+' ($'+c.total.toLocaleString()+')').join(' · ')}</div>`:''}
+  `;
+  document.getElementById('cierreParcialDetalle').innerHTML=vMes.length?`
+    <div class="sec">Comandas del turno</div>
+    <table class="report-table">
+      <thead><tr><th>Hora</th><th>Mesa</th><th>Pago</th><th>Venta</th><th>Propina</th></tr></thead>
+      <tbody>${[...vMes].reverse().map(v=>`<tr><td>${v.hora}</td><td>${v.mesa}</td><td>${v.pago}</td><td>$${v.total.toLocaleString()}</td><td style="color:#2d7a2d;">${(v.propina||0)>0?'$'+v.propina.toLocaleString():'—'}</td></tr>`).join('')}</tbody>
+    </table>`
+    :`<div class="empty" style="padding:20px 0;">Sin comandas cobradas en este turno</div>`;
+  document.getElementById('cierreParcialBtns').style.display='block';
+}
+
+function descargarCierreParcial(){
+  const mesero=document.getElementById('cierreMeseroSel').value;if(!mesero)return;
+  const hoy=new Date().toLocaleDateString('es-MX');
+  const fecha=new Date().toISOString().slice(0,10);
+  const hora=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+  let turnoInfo=null;
+  try{turnoInfo=JSON.parse(localStorage.getItem('i_turno_'+mesero)||'null');}catch(e){}
+  const turnoDesde=turnoInfo?turnoInfo.ts:0;
+  const vMes=ventas.filter(v=>{
+    if(new Date(v.id).toLocaleDateString('es-MX')!==hoy)return false;
+    if(v.mesero!==mesero)return false;
+    if(turnoDesde>0&&v.id<turnoDesde)return false;
+    return true;
+  });
+  const total=vMes.reduce((s,v)=>s+v.total,0);
+  const propTotal=vMes.reduce((s,v)=>s+(v.propina||0),0);
+  const cortTotal=vMes.reduce((s,v)=>s+(v.cortesias||0),0);
+  const abMes=comandas.filter(c=>c.estado==='abierta'&&c.mesero===mesero);
+  const turnoLabel=turnoInfo?`${turnoInfo.hora} → ${hora}`:`Todo el día → ${hora}`;
+  let txt=`╔══════════════════════════╗\n`;
+  txt+=`║   CIERRE DE TURNO        ║\n`;
+  txt+=`║   ${mesero.substring(0,22).padEnd(22)}║\n`;
+  txt+=`║   ${hoy.padEnd(26)}║\n`;
+  txt+=`║   ${turnoLabel.substring(0,26).padEnd(26)}║\n`;
+  txt+=`╚══════════════════════════╝\n\n`;
+  txt+=`RESUMEN\n${'─'.repeat(30)}\n`;
+  txt+=`Venta total:    $${total.toLocaleString()}\n`;
+  txt+=`Comandas:       ${vMes.length}\n`;
+  txt+=`Ticket prom.:   $${vMes.length?Math.round(total/vMes.length).toLocaleString():0}\n`;
+  txt+=`Propinas:       $${propTotal.toLocaleString()}\n`;
+  if(cortTotal>0)txt+=`Cortesías:      $${cortTotal.toLocaleString()}\n`;
+  if(abMes.length>0){
+    txt+=`\nMESAS ABIERTAS (quedan activas)\n${'─'.repeat(30)}\n`;
+    abMes.forEach(c=>{txt+=`Mesa ${c.mesa}: $${c.total.toLocaleString()} — desde ${c.hora}\n`;});
+  }
+  txt+=`\nDETALLE\n${'─'.repeat(30)}\n`;
+  [...vMes].reverse().forEach(v=>{txt+=`${v.hora} | Mesa ${v.mesa} | ${v.pago} | $${v.total.toLocaleString()}${(v.propina||0)>0?' + propina $'+v.propina.toLocaleString():''}\n`;});
+  txt+=`\n${'═'.repeat(30)}\n`;
+  try{localStorage.removeItem('i_turno_'+mesero);}catch(e){}
+  const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`INSTINTO_turno_${mesero.replace(/\s/g,'_')}_${fecha}.txt`;a.click();
+  URL.revokeObjectURL(url);
+  toast('Turno cerrado — reporte descargado ✓');
+  document.getElementById('turnoStatus').innerHTML=`<span style="color:#e24b4a;">🔴 Turno de ${mesero} cerrado a las ${hora}</span>`;
+  document.getElementById('cierreParcialBtns').style.display='none';
+}
+
+function iniciarCierre(){
+  pedirPin('Cierre del día','Ingresa la contraseña de administrador para ejecutar el cierre.',ejecutarCierre);
+}
+
+function ejecutarCierre(){
+  const hoy=new Date().toISOString().slice(0,10);
+  guardar();
+  const txt=generarTextoCierre(hoy);
+  const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`INSTINTO_cierre_${hoy}.txt`;a.click();
+  URL.revokeObjectURL(url);
+  toast('Cierre ejecutado — reporte descargado ✓');
+  renderCierre();switchTab('reporte');
+  document.getElementById('filtroFecha').value=hoy;
+  renderReporte();
+}
+
+// ── CONFIG ──
+function renderMeseroConfig(){
+  document.getElementById('meserosList').innerHTML=meseros.length
+    ?meseros.map((m,i)=>`<div class="mesero-item"><span style="font-size:15px;">${m}</span><button class="btn btn-danger btn-sm" onclick="eliminarMesero(${i})">Quitar</button></div>`).join('')
+    :'<div style="font-size:14px;color:#aaa;padding:12px 0;">Agrega el equipo</div>';
+}
+function agregarMesero(){
+  const inp=document.getElementById('nuevoMesero');const n=inp.value.trim();
+  if(!n){toast('Escribe un nombre');return;}if(meseros.includes(n)){toast('Ya existe');return;}
+  meseros.push(n);guardar();inp.value='';renderMeseroConfig();renderMeseroSelect();toast(n+' agregado ✓');
+}
+function eliminarMesero(i){
+  if(!confirm(`¿Quitar a ${meseros[i]}?`))return;
+  meseros.splice(i,1);guardar();renderMeseroConfig();renderMeseroSelect();
+}
+
+// ── NAV ──
+function switchTab(tab){
+  const tabs=['nueva','abiertas','reporte','cierre','config'];
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',tabs[i]===tab));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+tab).classList.add('active');
+  if(tab==='abiertas')renderAbiertas();
+  if(tab==='reporte'){if(!document.getElementById('filtroFecha').value)document.getElementById('filtroFecha').value=new Date().toISOString().slice(0,10);renderMeseroSelect();renderReporte();}
+  if(tab==='cierre')renderCierre();
+  if(tab==='config')renderMeseroConfig();
+}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+// ── INIT ──
+document.getElementById('fechaHoy').textContent=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
+initMenu();renderTicket();
+cargarDatos().then(()=>{renderMeseroSelect();renderAbiertas();});
+</script>
+</body>
+</html>
