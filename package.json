@@ -7,7 +7,7 @@
     "start": "node api/server-local.js"
   },
   "dependencies": {
-    "@vercel/kv": "^2.0.0",
+    "@upstash/redis": "^1.34.0",
     "cors": "^2.8.5",
     "express": "^4.19.2"
   },

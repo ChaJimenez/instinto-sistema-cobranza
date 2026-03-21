@@ -1,6 +1,11 @@
 const express = require('express');
 const cors = require('cors');
-const { kv } = require('@vercel/kv');
+const { Redis } = require('@upstash/redis');
+
+const kv = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 
 const app = express();
 app.use(cors());
