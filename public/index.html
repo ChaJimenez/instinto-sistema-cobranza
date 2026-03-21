@@ -246,7 +246,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
   <p style="font-size:13px;color:#888;margin-bottom:12px;">Exporta todos los datos para migración o respaldo. Importa el JSON del sistema anterior.</p>
   <div style="display:flex;gap:10px;flex-wrap:wrap;">
     <button class="btn btn-outline btn-sm" onclick="exportarBackup()">⬇ Exportar backup JSON</button>
-    <button class="btn btn-outline btn-sm" onclick="pedirPin('Importar datos','Esta acción carga datos del sistema anterior. Requiere autorización.',()=>document.getElementById(\'fileImport\').click())">⬆ Importar backup</button>
+    <button class="btn btn-outline btn-sm" onclick="document.getElementById('fileImport').click()">⬆ Importar backup</button>
     <input type="file" id="fileImport" accept=".json" style="display:none;" onchange="importarBackup(this)" />
   </div>
 </div>
