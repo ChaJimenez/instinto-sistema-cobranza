@@ -11,7 +11,7 @@ const net = require('net');
 const API_BASE = 'https://instinto-sistema-cobranza.vercel.app';
 
 const PRINTERS = {
-  cocina: { host: '192.168.3.1',   port: 9100 },  // ← confirmar IP con self-test
+  cocina: { host: '192.168.3.166', port: 9100 },
   barra:  { host: '192.168.3.170', port: 9100 },
 };
 
