@@ -165,9 +165,26 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
       <div class="pago-opt" id="pagoMixto" onclick="selPago(this,'Mixto')">🔀 Mixto</div>
     </div>
     <div id="mixtoSection" style="display:none;margin-bottom:12px;">
-      <div class="sec">Efectivo</div>
-      <input type="number" id="mixtoEfectivo" placeholder="$0" min="0" oninput="calcMixto()" style="width:100%;padding:9px 13px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;margin-bottom:8px;" />
-      <div style="font-size:14px;color:#555;padding:4px 0;">Tarjeta: <strong id="mixtoTarjetaAmt">$0</strong></div>
+      <div style="display:flex;gap:10px;margin-bottom:10px;">
+        <div style="flex:1;">
+          <div class="sec" style="margin-bottom:6px;">💵 Efectivo</div>
+          <input type="number" id="mixtoEfectivo" placeholder="$0" min="0" oninput="calcMixtoDesdeEf()" style="width:100%;padding:9px 13px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;" />
+        </div>
+        <div style="flex:1;">
+          <div class="sec" style="margin-bottom:6px;">💳 Tarjeta</div>
+          <input type="number" id="mixtoTarjeta" placeholder="$0" min="0" oninput="calcMixtoDesdeT()" style="width:100%;padding:9px 13px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;" />
+        </div>
+      </div>
+      <div id="mixtoError" style="font-size:12px;color:#e24b4a;margin-bottom:8px;display:none;">⚠ La suma no coincide con el total</div>
+      <div class="sec">Propina en tarjeta (opcional)</div>
+      <div class="propina-row">
+        <div class="propina-btn" onclick="selPropinaM(this,10)">10%</div>
+        <div class="propina-btn" onclick="selPropinaM(this,15)">15%</div>
+        <div class="propina-btn" onclick="selPropinaM(this,20)">20%</div>
+        <div class="propina-custom"><span style="font-size:13px;color:#666;">$</span><input type="number" id="mixtoPropinaCustom" placeholder="Otra" min="0" oninput="setPropinaM(this.value)" /></div>
+        <div class="propina-btn" onclick="selPropinaM(this,0)">Sin propina</div>
+      </div>
+      <div id="mixtoPropinaDisplay" style="font-size:14px;color:#2d7a2d;margin-bottom:6px;font-weight:500;"></div>
     </div>
     <div id="propinaSection" style="display:none;">
       <div class="sec">Propina (opcional)</div>
@@ -275,9 +292,26 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
       <div class="pago-opt" onclick="selPagoModal(this,'Mixto')">🔀 Mixto</div>
     </div>
     <div id="modalMixtoSection" style="display:none;margin-bottom:14px;">
-      <div class="sec">Efectivo</div>
-      <input type="number" id="modalMixtoEfectivo" placeholder="$0" min="0" oninput="calcMixtoModal()" style="width:100%;padding:9px 13px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;margin-bottom:8px;" />
-      <div style="font-size:14px;color:#555;padding:4px 0;">Tarjeta: <strong id="modalMixtoTarjetaAmt">$0</strong></div>
+      <div style="display:flex;gap:10px;margin-bottom:10px;">
+        <div style="flex:1;">
+          <div class="sec" style="margin-bottom:6px;">💵 Efectivo</div>
+          <input type="number" id="modalMixtoEfectivo" placeholder="$0" min="0" oninput="calcMixtoModalDesdeEf()" style="width:100%;padding:9px 13px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;" />
+        </div>
+        <div style="flex:1;">
+          <div class="sec" style="margin-bottom:6px;">💳 Tarjeta</div>
+          <input type="number" id="modalMixtoTarjeta" placeholder="$0" min="0" oninput="calcMixtoModalDesdeT()" style="width:100%;padding:9px 13px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;" />
+        </div>
+      </div>
+      <div id="modalMixtoError" style="font-size:12px;color:#e24b4a;margin-bottom:8px;display:none;">⚠ La suma no coincide con el total</div>
+      <div class="sec">Propina en tarjeta (opcional)</div>
+      <div class="propina-row">
+        <div class="propina-btn" onclick="selPropinaMMod(this,10)">10%</div>
+        <div class="propina-btn" onclick="selPropinaMMod(this,15)">15%</div>
+        <div class="propina-btn" onclick="selPropinaMMod(this,20)">20%</div>
+        <div class="propina-custom"><span style="font-size:13px;color:#666;">$</span><input type="number" id="modalMixtoPropinaCustom" placeholder="Otra" min="0" oninput="setPropinaMMod(this.value)" /></div>
+        <div class="propina-btn" onclick="selPropinaMMod(this,0)">Sin propina</div>
+      </div>
+      <div id="modalMixtoPropinaDisplay" style="font-size:14px;color:#2d7a2d;margin-bottom:6px;font-weight:500;"></div>
     </div>
     <div id="modalPropinaSection" style="display:none;margin-bottom:14px;">
       <div class="sec">Propina</div>
@@ -572,16 +606,43 @@ function selPago(el,tipo){
   document.getElementById('propinaSection').style.display=tipo==='Tarjeta'?'block':'none';
   document.getElementById('mixtoSection').style.display=tipo==='Mixto'?'block':'none';
   document.getElementById('mixtoEfectivo').value='';
-  document.getElementById('mixtoTarjetaAmt').textContent='$0';
+  document.getElementById('mixtoTarjeta').value='';
+  document.getElementById('mixtoPropinaDisplay').textContent='';
+  document.getElementById('mixtoPropinaCustom').value='';
+  document.getElementById('mixtoError').style.display='none';
+  document.querySelectorAll('#mixtoSection .propina-btn').forEach(b=>b.classList.remove('sel'));
   document.getElementById('propinaCustom').value='';
   document.querySelectorAll('#screen-nueva .propina-btn').forEach(b=>b.classList.remove('sel'));
   renderTicket();
 }
-function calcMixto(){
+function calcMixtoDesdeEf(){
   const total=totales().cobrable;
-  const ef=Math.min(parseFloat(document.getElementById('mixtoEfectivo').value)||0,total);
-  currentMixtoEf=ef;currentMixtoTj=Math.max(0,total-ef);
-  document.getElementById('mixtoTarjetaAmt').textContent='$'+currentMixtoTj.toLocaleString();
+  currentMixtoEf=Math.max(0,parseFloat(document.getElementById('mixtoEfectivo').value)||0);
+  currentMixtoTj=Math.max(0,total-currentMixtoEf);
+  document.getElementById('mixtoTarjeta').value=currentMixtoTj||'';
+  validarMixto(total);
+}
+function calcMixtoDesdeT(){
+  const total=totales().cobrable;
+  currentMixtoTj=Math.max(0,parseFloat(document.getElementById('mixtoTarjeta').value)||0);
+  currentMixtoEf=Math.max(0,total-currentMixtoTj);
+  document.getElementById('mixtoEfectivo').value=currentMixtoEf||'';
+  validarMixto(total);
+}
+function validarMixto(total){
+  const ok=Math.abs(currentMixtoEf+currentMixtoTj-total)<1;
+  document.getElementById('mixtoError').style.display=ok?'none':'block';
+}
+function selPropinaM(el,pct){
+  document.querySelectorAll('#mixtoSection .propina-btn').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');document.getElementById('mixtoPropinaCustom').value='';
+  currentPropina=pct>0?Math.round(currentMixtoTj*pct/100):0;
+  document.getElementById('mixtoPropinaDisplay').textContent=currentPropina>0?`Propina: $${currentPropina.toLocaleString()} (${pct}%)`:'Sin propina';
+}
+function setPropinaM(val){
+  document.querySelectorAll('#mixtoSection .propina-btn').forEach(b=>b.classList.remove('sel'));
+  currentPropina=parseFloat(val)||0;
+  document.getElementById('mixtoPropinaDisplay').textContent=currentPropina>0?`Propina: $${currentPropina.toLocaleString()}`:'';
 }
 function selPropina(el,pct){
   document.querySelectorAll('#screen-nueva .propina-btn').forEach(b=>b.classList.remove('sel'));
@@ -675,6 +736,7 @@ function saveComanda(){
 
 function cobrarComanda(){
   if(!validar())return;
+  if(currentPago==='Mixto'&&Math.abs(currentMixtoEf+currentMixtoTj-totales().cobrable)>=1){toast('⚠ Efectivo + Tarjeta debe sumar $'+totales().cobrable.toLocaleString());return;}
   const doCobrar=()=>{
     guardarCancelacionesItems();
     const pagoStr=currentPago==='Mixto'?`Mixto ($${currentMixtoEf.toLocaleString()} ef / $${currentMixtoTj.toLocaleString()} tj)`:currentPago;
@@ -705,6 +767,8 @@ function resetForm(){
   document.querySelectorAll('#screen-nueva .pago-opt').forEach((e,i)=>e.classList.toggle('sel',i===0));
   document.getElementById('propinaSection').style.display='none';
   document.getElementById('mixtoSection').style.display='none';
+  document.getElementById('mixtoEfectivo').value='';document.getElementById('mixtoTarjeta').value='';
+  document.getElementById('mixtoPropinaDisplay').textContent='';document.getElementById('mixtoError').style.display='none';
   document.getElementById('propinaDisplay').textContent='';
   document.getElementById('editingBanner').classList.remove('show');
   renderTicket();
@@ -784,17 +848,44 @@ function selPagoModal(el,tipo){
   document.getElementById('modalPropinaSection').style.display=tipo==='Tarjeta'?'block':'none';
   document.getElementById('modalMixtoSection').style.display=tipo==='Mixto'?'block':'none';
   document.getElementById('modalMixtoEfectivo').value='';
-  document.getElementById('modalMixtoTarjetaAmt').textContent='$0';
+  document.getElementById('modalMixtoTarjeta').value='';
+  document.getElementById('modalMixtoPropinaDisplay').textContent='';
+  document.getElementById('modalMixtoPropinaCustom').value='';
+  document.getElementById('modalMixtoError').style.display='none';
+  document.querySelectorAll('#modalMixtoSection .propina-btn').forEach(b=>b.classList.remove('sel'));
   document.getElementById('propinaModalDisplay').textContent='';
   document.getElementById('propinaModalCustom').value='';
   document.querySelectorAll('#modalCobrar .propina-btn').forEach(b=>b.classList.remove('sel'));
   actualizarModalLines();
 }
-function calcMixtoModal(){
+function calcMixtoModalDesdeEf(){
   const c=comandas.find(x=>x.id===modalIdx);if(!c)return;
-  const ef=Math.min(parseFloat(document.getElementById('modalMixtoEfectivo').value)||0,c.total);
-  modalMixtoEf=ef;modalMixtoTj=Math.max(0,c.total-ef);
-  document.getElementById('modalMixtoTarjetaAmt').textContent='$'+modalMixtoTj.toLocaleString();
+  modalMixtoEf=Math.max(0,parseFloat(document.getElementById('modalMixtoEfectivo').value)||0);
+  modalMixtoTj=Math.max(0,c.total-modalMixtoEf);
+  document.getElementById('modalMixtoTarjeta').value=modalMixtoTj||'';
+  validarMixtoModal(c.total);
+}
+function calcMixtoModalDesdeT(){
+  const c=comandas.find(x=>x.id===modalIdx);if(!c)return;
+  modalMixtoTj=Math.max(0,parseFloat(document.getElementById('modalMixtoTarjeta').value)||0);
+  modalMixtoEf=Math.max(0,c.total-modalMixtoTj);
+  document.getElementById('modalMixtoEfectivo').value=modalMixtoEf||'';
+  validarMixtoModal(c.total);
+}
+function validarMixtoModal(total){
+  const ok=Math.abs(modalMixtoEf+modalMixtoTj-total)<1;
+  document.getElementById('modalMixtoError').style.display=ok?'none':'block';
+}
+function selPropinaMMod(el,pct){
+  document.querySelectorAll('#modalMixtoSection .propina-btn').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');document.getElementById('modalMixtoPropinaCustom').value='';
+  modalPropina=pct>0?Math.round(modalMixtoTj*pct/100):0;
+  document.getElementById('modalMixtoPropinaDisplay').textContent=modalPropina>0?`Propina: $${modalPropina.toLocaleString()} (${pct}%)`:'Sin propina';
+}
+function setPropinaMMod(val){
+  document.querySelectorAll('#modalMixtoSection .propina-btn').forEach(b=>b.classList.remove('sel'));
+  modalPropina=parseFloat(val)||0;
+  document.getElementById('modalMixtoPropinaDisplay').textContent=modalPropina>0?`Propina: $${modalPropina.toLocaleString()}`:'';
 }
 function selPropinaModal(el,pct){
   document.querySelectorAll('#modalCobrar .propina-btn').forEach(b=>b.classList.remove('sel'));
