@@ -162,6 +162,12 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
     <div class="pago-opts">
       <div class="pago-opt sel" id="pagoEfectivo" onclick="selPago(this,'Efectivo')">💵 Efectivo</div>
       <div class="pago-opt" id="pagoTarjeta" onclick="selPago(this,'Tarjeta')">💳 Tarjeta</div>
+      <div class="pago-opt" id="pagoMixto" onclick="selPago(this,'Mixto')">🔀 Mixto</div>
+    </div>
+    <div id="mixtoSection" style="display:none;margin-bottom:12px;">
+      <div class="sec">Efectivo</div>
+      <input type="number" id="mixtoEfectivo" placeholder="$0" min="0" oninput="calcMixto()" style="width:100%;padding:9px 13px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;margin-bottom:8px;" />
+      <div style="font-size:14px;color:#555;padding:4px 0;">Tarjeta: <strong id="mixtoTarjetaAmt">$0</strong></div>
     </div>
     <div id="propinaSection" style="display:none;">
       <div class="sec">Propina (opcional)</div>
@@ -266,6 +272,12 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
     <div class="pago-opts" style="margin-bottom:14px;">
       <div class="pago-opt sel" onclick="selPagoModal(this,'Efectivo')">💵 Efectivo</div>
       <div class="pago-opt" onclick="selPagoModal(this,'Tarjeta')">💳 Tarjeta</div>
+      <div class="pago-opt" onclick="selPagoModal(this,'Mixto')">🔀 Mixto</div>
+    </div>
+    <div id="modalMixtoSection" style="display:none;margin-bottom:14px;">
+      <div class="sec">Efectivo</div>
+      <input type="number" id="modalMixtoEfectivo" placeholder="$0" min="0" oninput="calcMixtoModal()" style="width:100%;padding:9px 13px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;margin-bottom:8px;" />
+      <div style="font-size:14px;color:#555;padding:4px 0;">Tarjeta: <strong id="modalMixtoTarjetaAmt">$0</strong></div>
     </div>
     <div id="modalPropinaSection" style="display:none;margin-bottom:14px;">
       <div class="sec">Propina</div>
@@ -323,9 +335,9 @@ const MENU = {
 const EXTRAS=[{n:"Crispy onions",p:35},{n:"Extra carne",p:55},{n:"Puré de papa",p:35},{n:"Aguacate",p:55},{n:"Tocino extra",p:35},{n:"Chicharrón carnoso",p:50}];
 
 // ── ESTADO EN MEMORIA ──
-let currentItems=[], currentPago="Efectivo", editandoId=null, currentPropina=0;
+let currentItems=[], currentPago="Efectivo", editandoId=null, currentPropina=0, currentMixtoEf=0, currentMixtoTj=0;
 let comandas=[], ventas=[], meseros=[], cancelaciones=[];
-let modalPago="Efectivo", modalIdx=null, modalPropina=0;
+let modalPago="Efectivo", modalIdx=null, modalPropina=0, modalMixtoEf=0, modalMixtoTj=0;
 let pinCallback=null;
 let ultimaActualizacion=0;
 
@@ -556,11 +568,20 @@ function totales(){
 function selPago(el,tipo){
   document.querySelectorAll('#screen-nueva .pago-opt').forEach(e=>e.classList.remove('sel'));
   el.classList.add('sel');currentPago=tipo;
-  currentPropina=0;
+  currentPropina=0;currentMixtoEf=0;currentMixtoTj=0;
   document.getElementById('propinaSection').style.display=tipo==='Tarjeta'?'block':'none';
+  document.getElementById('mixtoSection').style.display=tipo==='Mixto'?'block':'none';
+  document.getElementById('mixtoEfectivo').value='';
+  document.getElementById('mixtoTarjetaAmt').textContent='$0';
   document.getElementById('propinaCustom').value='';
   document.querySelectorAll('#screen-nueva .propina-btn').forEach(b=>b.classList.remove('sel'));
   renderTicket();
+}
+function calcMixto(){
+  const total=totales().cobrable;
+  const ef=Math.min(parseFloat(document.getElementById('mixtoEfectivo').value)||0,total);
+  currentMixtoEf=ef;currentMixtoTj=Math.max(0,total-ef);
+  document.getElementById('mixtoTarjetaAmt').textContent='$'+currentMixtoTj.toLocaleString();
 }
 function selPropina(el,pct){
   document.querySelectorAll('#screen-nueva .propina-btn').forEach(b=>b.classList.remove('sel'));
@@ -656,7 +677,8 @@ function cobrarComanda(){
   if(!validar())return;
   const doCobrar=()=>{
     guardarCancelacionesItems();
-    const c={...buildComanda('cerrada'),pago:currentPago,propina:currentPropina};
+    const pagoStr=currentPago==='Mixto'?`Mixto ($${currentMixtoEf.toLocaleString()} ef / $${currentMixtoTj.toLocaleString()} tj)`:currentPago;
+    const c={...buildComanda('cerrada'),pago:pagoStr,propina:currentPropina};
     ventas.push(c);editandoId=null;guardar();
     imprimirTicket(c);
     resetForm();toast('Venta registrada ✓');switchTab('reporte');
@@ -679,9 +701,10 @@ function guardarCancelacionesItems(){
 
 function resetForm(){
   document.getElementById('mesa').value='';document.getElementById('meseroSel').value='';
-  currentItems=[];currentPago='Efectivo';currentPropina=0;editandoId=null;
+  currentItems=[];currentPago='Efectivo';currentPropina=0;currentMixtoEf=0;currentMixtoTj=0;editandoId=null;
   document.querySelectorAll('#screen-nueva .pago-opt').forEach((e,i)=>e.classList.toggle('sel',i===0));
   document.getElementById('propinaSection').style.display='none';
+  document.getElementById('mixtoSection').style.display='none';
   document.getElementById('propinaDisplay').textContent='';
   document.getElementById('editingBanner').classList.remove('show');
   renderTicket();
@@ -746,9 +769,10 @@ function abrirCobro(id){
   document.getElementById('modalCancelados').textContent=cancItems.length?`✕ Cancelados: ${cancItems.map(it=>it.n).join(', ')}`:'';
   document.getElementById('modalTotal').textContent='$'+c.total.toLocaleString();
   document.getElementById('modalLines').innerHTML='';
-  modalPago='Efectivo';
+  modalPago='Efectivo';modalMixtoEf=0;modalMixtoTj=0;
   document.querySelectorAll('#modalCobrar .pago-opt').forEach((e,i)=>e.classList.toggle('sel',i===0));
   document.getElementById('modalPropinaSection').style.display='none';
+  document.getElementById('modalMixtoSection').style.display='none';
   document.getElementById('modalPin').value='';document.getElementById('modalPinError').textContent='';
   const necesitaPin=c.cortesias>0||cancItems.length>0;
   document.getElementById('modalAuthSection').style.display=necesitaPin?'block':'none';
@@ -756,12 +780,21 @@ function abrirCobro(id){
 }
 function selPagoModal(el,tipo){
   document.querySelectorAll('#modalCobrar .pago-opt').forEach(e=>e.classList.remove('sel'));
-  el.classList.add('sel');modalPago=tipo;modalPropina=0;
+  el.classList.add('sel');modalPago=tipo;modalPropina=0;modalMixtoEf=0;modalMixtoTj=0;
   document.getElementById('modalPropinaSection').style.display=tipo==='Tarjeta'?'block':'none';
+  document.getElementById('modalMixtoSection').style.display=tipo==='Mixto'?'block':'none';
+  document.getElementById('modalMixtoEfectivo').value='';
+  document.getElementById('modalMixtoTarjetaAmt').textContent='$0';
   document.getElementById('propinaModalDisplay').textContent='';
   document.getElementById('propinaModalCustom').value='';
   document.querySelectorAll('#modalCobrar .propina-btn').forEach(b=>b.classList.remove('sel'));
   actualizarModalLines();
+}
+function calcMixtoModal(){
+  const c=comandas.find(x=>x.id===modalIdx);if(!c)return;
+  const ef=Math.min(parseFloat(document.getElementById('modalMixtoEfectivo').value)||0,c.total);
+  modalMixtoEf=ef;modalMixtoTj=Math.max(0,c.total-ef);
+  document.getElementById('modalMixtoTarjetaAmt').textContent='$'+modalMixtoTj.toLocaleString();
 }
 function selPropinaModal(el,pct){
   document.querySelectorAll('#modalCobrar .propina-btn').forEach(b=>b.classList.remove('sel'));
@@ -790,7 +823,8 @@ function confirmarCobro(){
   }
   const cancItems=c.items.filter(it=>it.cancelado);
   if(cancItems.length){cancelaciones.push({id:Date.now(),mesa:c.mesa,mesero:c.mesero,items:JSON.parse(JSON.stringify(cancItems)),valor:cancItems.reduce((s,it)=>s+it.p*it.q,0),hora:c.hora,fecha:c.fecha||new Date().toLocaleDateString('es-MX')});}
-  const venta={...c,pago:modalPago,propina:modalPropina,estado:'cerrada'};
+  const pagoStrModal=modalPago==='Mixto'?`Mixto ($${modalMixtoEf.toLocaleString()} ef / $${modalMixtoTj.toLocaleString()} tj)`:modalPago;
+  const venta={...c,pago:pagoStrModal,propina:modalPropina,estado:'cerrada'};
   ventas.push(venta);comandas.splice(idx,1);
   guardar();imprimirTicket(venta);
   cerrarModal('modalCobrar');renderAbiertas();toast('Cobrado ✓');
