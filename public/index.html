@@ -120,6 +120,8 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
 .editing-banner.show { display: block; }
 .cierre-box { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
 @media (max-width: 640px) { .stat-grid { grid-template-columns: 1fr 1fr; } .screen { padding: 14px; } }
+#printArea { display: none; }
+@media print { body > *:not(#printArea) { display: none !important; } #printArea { display: block !important; font-family: monospace; font-size: 13px; margin: 0; padding: 16px; max-width: 300px; } #printArea h2 { text-align: center; font-size: 18px; letter-spacing: 0.15em; margin-bottom: 4px; } #printArea .sub { text-align: center; font-size: 12px; color: #555; margin-bottom: 12px; } #printArea hr { border: none; border-top: 1px dashed #aaa; margin: 10px 0; } #printArea table { width: 100%; border-collapse: collapse; } #printArea .total-row td { font-size: 16px; font-weight: 700; padding-top: 8px; } #printArea .pie { text-align: center; font-size: 11px; color: #aaa; margin-top: 14px; } }
 </style>
 </head>
 <body>
@@ -671,18 +673,13 @@ function imprimirBrowser(venta){
   const propina=venta.propina>0?`<tr><td style="padding:5px 0;color:#2d7a2d;">Propina</td><td style="text-align:right;padding:5px 0;color:#2d7a2d;font-weight:600;">$${venta.propina.toLocaleString()}</td></tr>`:'';
   const cort=(venta.cortesias||0)>0?`<tr><td style="padding:5px 0;color:#b06800;">Cortesías</td><td style="text-align:right;padding:5px 0;color:#b06800;font-weight:600;">$${venta.cortesias.toLocaleString()}</td></tr>`:'';
   const pagoLine=venta.pago?`<tr><td style="padding:5px 0;color:#555;">Forma de pago</td><td style="text-align:right;padding:5px 0;color:#555;">${venta.pago}</td></tr>`:'';
-  const titulo=venta.preview?'CUENTA':'TICKET';
-  const win=window.open('','_blank','width=320,height=600');
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${titulo}</title>
-  <style>body{font-family:monospace;font-size:13px;margin:0;padding:16px;max-width:300px;}h2{text-align:center;font-size:18px;letter-spacing:0.15em;margin-bottom:4px;}.sub{text-align:center;font-size:12px;color:#555;margin-bottom:12px;}hr{border:none;border-top:1px dashed #aaa;margin:10px 0;}table{width:100%;border-collapse:collapse;}.total-row td{font-size:16px;font-weight:700;padding-top:8px;}.pie{text-align:center;font-size:11px;color:#aaa;margin-top:14px;}@media print{body{margin:0;padding:8px;}}</style>
-  </head><body>
-  <h2>INSTINTO</h2>
-  <div class="sub">Mesa ${venta.mesa} · ${venta.mesero}<br>${venta.fecha} ${venta.hora}</div>
-  <hr><table>${filas}</table><hr>
-  <table>${cort}${pagoLine}${propina}<tr class="total-row"><td>TOTAL</td><td style="text-align:right;">$${venta.total.toLocaleString()}</td></tr></table>
-  <div class="pie">${venta.preview?'— cuenta previa, pendiente de cobro —':'¡Gracias por su visita!'}</div>
-  <script>window.onload=()=>{window.print();}<\/script></body></html>`);
-  win.document.close();
+  document.getElementById('printArea').innerHTML=`
+    <h2>INSTINTO</h2>
+    <div class="sub">Mesa ${venta.mesa} · ${venta.mesero}<br>${venta.fecha||new Date().toLocaleDateString('es-MX')} ${venta.hora}</div>
+    <hr><table>${filas}</table><hr>
+    <table>${cort}${pagoLine}${propina}<tr class="total-row"><td>TOTAL</td><td style="text-align:right;">$${venta.total.toLocaleString()}</td></tr></table>
+    <div class="pie">${venta.preview?'— cuenta previa, pendiente de cobro —':'¡Gracias por su visita!'}</div>`;
+  window.print();
 }
 
 async function imprimirCuentaPrevia(){
@@ -1193,5 +1190,6 @@ document.getElementById('fechaHoy').textContent=new Date().toLocaleDateString('e
 initMenu();renderTicket();
 cargarDatos().then(()=>{renderMeseroSelect();renderAbiertas();});
 </script>
+<div id="printArea"></div>
 </body>
 </html>
