@@ -2,7 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const { Redis } = require('@upstash/redis');
 
-const kv = Redis.fromEnv();
+const kv = new Redis({
+  url: process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN,
+});
 
 const app = express();
 app.use(cors());
