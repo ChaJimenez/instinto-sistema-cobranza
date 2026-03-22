@@ -13,7 +13,7 @@ const API_BASE = 'https://instinto-sistema-cobranza.vercel.app';
 const PRINTERS = {
   cocina: { host: '192.168.3.166', port: 9100 },
   barra:  { host: '192.168.3.170', port: 9100 },
-  recibo: { host: '192.168.3.170', port: 9100 }, // misma que barra — cambiar si hay impresora dedicada
+  recibo: { host: '192.168.101.100', port: 9100 },
 };
 
 const ESC = '\x1B';
