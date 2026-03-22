@@ -77,6 +77,38 @@ app.post('/api/importar', async (req, res) => {
   }
 });
 
+// ── Impresión en cocina / barra ──
+const BARRA_CATS = ['Refrescos', 'Cervezas', 'Preparados'];
+
+app.post('/api/imprimir', async (req, res) => {
+  try {
+    const { mesa, mesero, items = [], hora } = req.body;
+    const activos = items.filter(it => !it.cancelado);
+    const cocina = activos.filter(it => !BARRA_CATS.includes(it.cat));
+    const barra  = activos.filter(it =>  BARRA_CATS.includes(it.cat));
+    const ts = Date.now();
+    const jobs = [];
+    if (cocina.length) jobs.push({ id: ts + 'c', destino: 'cocina', mesa, mesero, items: cocina, hora, ts });
+    if (barra.length)  jobs.push({ id: ts + 'b', destino: 'barra',  mesa, mesero, items: barra,  hora, ts });
+    if (jobs.length) await kv.rpush('i:printjobs', ...jobs.map(j => JSON.stringify(j)));
+    res.json({ ok: true, enviados: jobs.length });
+  } catch (e) {
+    console.error('Error /api/imprimir:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/print-queue', async (req, res) => {
+  try {
+    const raw = await kv.lrange('i:printjobs', 0, -1);
+    if (raw.length) await kv.del('i:printjobs');
+    const jobs = raw.map(j => (typeof j === 'string' ? JSON.parse(j) : j));
+    res.json({ jobs });
+  } catch (e) {
+    res.json({ jobs: [] });
+  }
+});
+
 app.get('/health', (req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
 module.exports = app;

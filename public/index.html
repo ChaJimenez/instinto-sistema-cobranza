@@ -465,12 +465,12 @@ function initMenu(){
 }
 function renderPlatillos(cat){
   document.getElementById('platillosGrid').innerHTML=MENU[cat].map(item=>
-    `<button class="plato-btn" onclick='addItem(${JSON.stringify(item.n)},${item.p})'><div class="plato-name">${item.n}</div><div class="plato-price">$${item.p}</div></button>`
+    `<button class="plato-btn" onclick='addItem(${JSON.stringify(item.n)},${item.p},${JSON.stringify(cat)})'><div class="plato-name">${item.n}</div><div class="plato-price">$${item.p}</div></button>`
   ).join('');
 }
 function renderExtras(){
   document.getElementById('extrasGrid').innerHTML=EXTRAS.map(ex=>
-    `<button class="extra-btn" onclick='addItem(${JSON.stringify("+"+ex.n)},${ex.p})'><span style="font-weight:400;color:#555;">${ex.n}</span><span>+$${ex.p}</span></button>`
+    `<button class="extra-btn" onclick='addItem(${JSON.stringify("+"+ex.n)},${ex.p},"Extras")'><span style="font-weight:400;color:#555;">${ex.n}</span><span>+$${ex.p}</span></button>`
   ).join('');
 }
 function renderMeseroSelect(){
@@ -483,9 +483,9 @@ function renderMeseroSelect(){
 }
 
 // ── ITEMS ──
-function addItem(nombre,precio){
+function addItem(nombre,precio,cat=''){
   const ex=currentItems.find(it=>it.n===nombre&&!it.cancelado);
-  if(ex){ex.q++;}else{currentItems.push({n:nombre,p:precio,q:1,nota:'',cortesia:false,cancelado:false});}
+  if(ex){ex.q++;}else{currentItems.push({n:nombre,p:precio,q:1,nota:'',cortesia:false,cancelado:false,cat});}
   renderTicket();toast(nombre.replace('+','')+' ✓');
 }
 function changeQty(idx,delta){
@@ -623,6 +623,14 @@ async function imprimirTicket(venta){
   }catch(e){}
 }
 
+async function enviarImpresion(comanda){
+  try{
+    const resp=await fetch('/api/imprimir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mesa:comanda.mesa,mesero:comanda.mesero,hora:comanda.hora,items:comanda.items})});
+    const r=await resp.json();
+    if(r.enviados>0)toast('🖨 Enviado a cocina/barra ✓');
+  }catch(e){}
+}
+
 // ── VALIDAR / GUARDAR ──
 function tieneRestriccion(){return currentItems.some(it=>it.cortesia||it.cancelado);}
 function validar(){
@@ -636,8 +644,9 @@ function saveComanda(){
   if(!validar())return;
   const doSave=()=>{
     guardarCancelacionesItems();
-    comandas.push(buildComanda('abierta'));
-    editandoId=null;guardar();resetForm();toast('Comanda guardada ✓');switchTab('abiertas');
+    const comanda=buildComanda('abierta');
+    comandas.push(comanda);
+    editandoId=null;guardar();enviarImpresion(comanda);resetForm();toast('Comanda guardada ✓');switchTab('abiertas');
   };
   if(tieneRestriccion()){pedirPin('Autorización requerida','Esta comanda tiene cortesías o cancelaciones.',doSave);}
   else{doSave();}
