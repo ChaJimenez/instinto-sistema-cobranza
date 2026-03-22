@@ -98,6 +98,18 @@ app.post('/api/imprimir', async (req, res) => {
   }
 });
 
+// ── Imprimir recibo de cuenta (preview o ticket final) ──
+app.post('/api/imprimir-recibo', async (req, res) => {
+  try {
+    const job = { id: Date.now() + 'r', destino: 'recibo', ts: Date.now(), ...req.body };
+    await kv.rpush('i:printjobs', JSON.stringify(job));
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Error /api/imprimir-recibo:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/print-queue', async (req, res) => {
   try {
     const raw = await kv.lrange('i:printjobs', 0, -1);

@@ -684,14 +684,21 @@ function imprimirBrowser(venta){
 
 async function imprimirCuentaPrevia(){
   const c=comandas.find(x=>x.id===modalIdx);if(!c)return;
-  const preview={mesa:c.mesa,mesero:c.mesero,hora:c.hora,fecha:c.fecha||new Date().toLocaleDateString('es-MX'),items:c.items,total:c.total,cortesias:c.cortesias||0,pago:'',propina:0,preview:true};
-  imprimirBrowser(preview);
-  imprimirTicket({...preview}).catch(()=>{});
+  await enviarRecibo({mesa:c.mesa,mesero:c.mesero,hora:c.hora,fecha:c.fecha||new Date().toLocaleDateString('es-MX'),items:c.items,total:c.total,cortesias:c.cortesias||0,pago:'',propina:0,preview:true});
 }
 
 function imprimirCuentaMesa(id){
   const c=comandas.find(x=>x.id===id);if(!c)return;
-  imprimirBrowser({...c,preview:true,pago:'',propina:0});
+  enviarRecibo({mesa:c.mesa,mesero:c.mesero,hora:c.hora,fecha:c.fecha||new Date().toLocaleDateString('es-MX'),items:c.items,total:c.total,cortesias:c.cortesias||0,pago:'',propina:0,preview:true});
+}
+
+async function enviarRecibo(venta){
+  try{
+    await fetch('/api/imprimir-recibo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(venta)});
+    toast('🖨 Cuenta enviada a impresora ✓');
+  }catch(e){
+    toast('⚠ Sin conexión con impresora');
+  }
 }
 
 async function imprimirTicket(venta){
@@ -739,7 +746,7 @@ function cobrarComanda(){
     const pagoStr=currentPago==='Mixto'?`Mixto ($${currentMixtoEf.toLocaleString()} ef / $${currentMixtoTj.toLocaleString()} tj)`:currentPago;
     const c={...buildComanda('cerrada'),pago:pagoStr,propina:currentPropina};
     ventas.push(c);editandoId=null;guardar();
-    imprimirTicket(c);
+    enviarRecibo(c);
     resetForm();toast('Venta registrada ✓');switchTab('reporte');
   };
   if(tieneRestriccion()){pedirPin('Autorización requerida','Esta cuenta tiene cortesías o cancelaciones.',doCobrar);}
@@ -914,7 +921,7 @@ function confirmarCobro(){
   const pagoStrModal=modalPago==='Mixto'?`Mixto ($${modalMixtoEf.toLocaleString()} ef / $${modalMixtoTj.toLocaleString()} tj)`:modalPago;
   const venta={...c,pago:pagoStrModal,propina:modalPropina,estado:'cerrada'};
   ventas.push(venta);comandas.splice(idx,1);
-  guardar();imprimirTicket(venta);
+  guardar();enviarRecibo(venta);
   cerrarModal('modalCobrar');renderAbiertas();toast('Cobrado ✓');
 }
 function cerrarModal(id){document.getElementById(id).classList.remove('open');}
