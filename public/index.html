@@ -1014,7 +1014,7 @@ function confirmarCobro(){
   const pagoStrModal=modalPago==='Mixto'?`Mixto ($${modalMixtoEf.toLocaleString()} ef / $${modalMixtoTj.toLocaleString()} tj)`:modalPago;
   const {bruto,desc,cobrable}=calcDescModal(c);
   const descObj=desc>0?{tipo:modalDescuento.tipo,pct:modalDescuento.pct,valor:desc}:null;
-  const venta={...c,total:cobrable,subtotal:bruto,descuento:descObj,pago:pagoStrModal,propina:modalPropina,estado:'cerrada'};
+  const venta={...c,total:cobrable,subtotal:bruto,descuento:descObj,pago:pagoStrModal,propina:modalPropina,estado:'cerrada',...(modalPago==='Mixto'?{mixtoEf:modalMixtoEf,mixtoTj:modalMixtoTj}:{})};
   ventas.push(venta);comandas.splice(idx,1);
   guardar();enviarRecibo(venta);
   cerrarModal('modalCobrar');renderAbiertas();toast('Cobrado ✓');
@@ -1192,36 +1192,108 @@ function renderReporte(){
 
 function generarTextoCierre(fecha){
   const hoyStr=new Date(fecha+'T12:00:00').toLocaleDateString('es-MX');
-  const vFilt=ventas.filter(v=>new Date(v.id).toLocaleDateString('es-MX')===hoyStr);
-  const cFilt=cancelaciones.filter(c=>new Date(c.id).toLocaleDateString('es-MX')===hoyStr);
+  const matchF=v=>new Date(v.id).toLocaleDateString('es-MX')===hoyStr;
+  const vFilt=ventas.filter(v=>matchF(v)&&!v.excluida);
+  const cFilt=cancelaciones.filter(c=>matchF(c));
+  const mAbiertas=comandas.filter(c=>c.estado==='abierta'&&matchF(c));
+  const abiertasTotal=mAbiertas.reduce((s,c)=>s+(c.total||0),0);
   const total=vFilt.reduce((s,v)=>s+v.total,0);
+  const granTotal=total+abiertasTotal;
   const propTotal=vFilt.reduce((s,v)=>s+(v.propina||0),0);
   const cortTotal=vFilt.reduce((s,v)=>s+(v.cortesias||0),0);
   const cancTotal=cFilt.reduce((s,c)=>s+c.valor,0);
-  const metodos={};
-  vFilt.forEach(v=>{metodos[v.pago]=(metodos[v.pago]||{n:0,t:0,p:0});metodos[v.pago].n++;metodos[v.pago].t+=v.total;metodos[v.pago].p+=(v.propina||0);});
+  const descTotal=vFilt.reduce((s,v)=>s+((v.descuento&&v.descuento.valor)||0),0);
+  const ticket=vFilt.length?Math.round(total/vFilt.length):0;
+  // Hora pico
+  const porHora={};
+  vFilt.forEach(v=>{const h=new Date(v.id).getHours();if(!porHora[h])porHora[h]={t:0,n:0};porHora[h].t+=v.total;porHora[h].n++;});
+  const picoPair=Object.entries(porHora).sort((a,b)=>b[1].t-a[1].t)[0];
+  const picoStr=picoPair?`${String(picoPair[0]).padStart(2,'0')}:00–${String(Number(picoPair[0])+1).padStart(2,'0')}:00  ($${picoPair[1].t.toLocaleString()} · ${picoPair[1].n} mesa${picoPair[1].n>1?'s':''})`:'—';
+  // Formas de pago (agrupando Mixto)
+  const metodos={};let mixtoEfTot=0,mixtoTjTot=0;
+  vFilt.forEach(v=>{
+    const base=v.pago.startsWith('Mixto')?'Mixto':v.pago;
+    if(!metodos[base])metodos[base]={n:0,t:0,p:0};
+    metodos[base].n++;metodos[base].t+=v.total;metodos[base].p+=(v.propina||0);
+    if(base==='Mixto'){
+      if(v.mixtoEf!==undefined){mixtoEfTot+=v.mixtoEf;mixtoTjTot+=v.mixtoTj;}
+      else{const m=v.pago.match(/\$([0-9,]+)\s*ef.*?\$([0-9,]+)\s*tj/);if(m){mixtoEfTot+=parseFloat(m[1].replace(/,/g,''));mixtoTjTot+=parseFloat(m[2].replace(/,/g,''));}}
+    }
+  });
+  // Por mesero
   const xMes={};
-  vFilt.forEach(v=>{if(!xMes[v.mesero])xMes[v.mesero]={n:0,t:0};xMes[v.mesero].n++;xMes[v.mesero].t+=v.total;});
+  vFilt.forEach(v=>{if(!xMes[v.mesero])xMes[v.mesero]={n:0,t:0,p:0};xMes[v.mesero].n++;xMes[v.mesero].t+=v.total;xMes[v.mesero].p+=(v.propina||0);});
+  // Descuentos por tipo
+  const descEmpl=vFilt.filter(v=>v.descuento&&v.descuento.tipo==='empleado');
+  const descPct=vFilt.filter(v=>v.descuento&&v.descuento.tipo==='pct');
+  // Top 10 productos
   const prods={};
-  vFilt.forEach(v=>{v.items.filter(it=>!it.cancelado&&!it.cortesia).forEach(it=>{if(!prods[it.n])prods[it.n]={q:0};prods[it.n].q+=it.q;});});
-  const top5=Object.entries(prods).sort((a,b)=>b[1].q-a[1].q).slice(0,5);
-  let txt=`╔══════════════════════════╗\n`;
-  txt+=`║    CIERRE INSTINTO       ║\n`;
-  txt+=`║    ${hoyStr.padEnd(22)}║\n`;
-  txt+=`╚══════════════════════════╝\n\n`;
-  txt+=`RESUMEN GENERAL\n${'─'.repeat(30)}\n`;
-  txt+=`Venta total:    $${total.toLocaleString()}\n`;
-  txt+=`Comandas:       ${vFilt.length}\n`;
-  txt+=`Ticket prom.:   $${vFilt.length?Math.round(total/vFilt.length).toLocaleString():0}\n`;
-  if(propTotal>0)txt+=`Propinas:       $${propTotal.toLocaleString()}\n`;
-  if(cortTotal>0)txt+=`Cortesías:      $${cortTotal.toLocaleString()}\n`;
-  if(cancTotal>0)txt+=`Cancelaciones:  $${cancTotal.toLocaleString()}\n`;
-  txt+=`\nPOR FORMA DE PAGO\n${'─'.repeat(30)}\n`;
-  Object.entries(metodos).forEach(([m,d])=>{txt+=`${m}: $${d.t.toLocaleString()} (${d.n} cmd${d.p>0?' + prop $'+d.p.toLocaleString():''})\n`;});
-  txt+=`\nPOR MESERO\n${'─'.repeat(30)}\n`;
-  Object.entries(xMes).sort((a,b)=>b[1].t-a[1].t).forEach(([m,d])=>{txt+=`${m}: $${d.t.toLocaleString()} (${d.n} cmd)\n`;});
-  if(top5.length){txt+=`\nTOP PRODUCTOS\n${'─'.repeat(30)}\n`;top5.forEach(([n,d])=>{txt+=`${n}: ${d.q} uds\n`;});}
-  txt+=`\n${'═'.repeat(30)}\n`;
+  vFilt.forEach(v=>{v.items.filter(it=>!it.cancelado&&!it.cortesia).forEach(it=>{if(!prods[it.n])prods[it.n]={q:0,t:0};prods[it.n].q+=it.q;prods[it.n].t+=it.p*it.q;});});
+  const top10=Object.entries(prods).sort((a,b)=>b[1].q-a[1].q).slice(0,10);
+  // Ediciones de encargado
+  const edits=[];
+  vFilt.forEach(v=>{(v.editLog||[]).forEach(e=>edits.push({...e,mesa:v.mesa,mesero:v.mesero}));});
+  const generadoHora=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+  let txt=`╔══════════════════════════════════════╗\n`;
+  txt+=`║         CIERRE INSTINTO              ║\n`;
+  txt+=`║  ${hoyStr.padEnd(36)}║\n`;
+  txt+=`║  Generado: ${generadoHora.padEnd(26)}║\n`;
+  txt+=`╚══════════════════════════════════════╝\n\n`;
+  txt+=`━━━ RESUMEN EJECUTIVO ━━━━━━━━━━━━━━━━━\n`;
+  txt+=`Gran total del día:  $${granTotal.toLocaleString()}\n`;
+  txt+=`  ✓ Cobrado:         $${total.toLocaleString()}  (${vFilt.length} comanda${vFilt.length!==1?'s':''})\n`;
+  if(mAbiertas.length>0)txt+=`  ◷ Mesas abiertas:  $${abiertasTotal.toLocaleString()}  (${mAbiertas.length} pendiente${mAbiertas.length>1?'s':''})\n`;
+  txt+=`Ticket promedio:     $${ticket.toLocaleString()}\n`;
+  txt+=`Hora pico:           ${picoStr}\n`;
+  txt+=`\n━━━ FORMAS DE PAGO ━━━━━━━━━━━━━━━━━━━\n`;
+  Object.entries(metodos).forEach(([m,d])=>{
+    txt+=`${m.padEnd(12)} $${d.t.toLocaleString()}  (${d.n} cmd${d.p>0?'  prop $'+d.p.toLocaleString():''})\n`;
+    if(m==='Mixto'&&(mixtoEfTot+mixtoTjTot)>0)txt+=`  └ EF: $${mixtoEfTot.toLocaleString()}  |  TJ: $${mixtoTjTot.toLocaleString()}\n`;
+  });
+  txt+=`\n━━━ PROPINAS ━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  txt+=`Total propinas:  $${propTotal.toLocaleString()}\n`;
+  Object.entries(xMes).sort((a,b)=>b[1].p-a[1].p).forEach(([m,d])=>{if(d.p>0)txt+=`  ${m.padEnd(14)} $${d.p.toLocaleString()}  (${d.n} mesa${d.n>1?'s':''})\n`;});
+  txt+=`\n━━━ POR MESERO ━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  Object.entries(xMes).sort((a,b)=>b[1].t-a[1].t).forEach(([m,d])=>{
+    txt+=`${m.padEnd(14)} $${d.t.toLocaleString()}  (${d.n} cmd | prom $${Math.round(d.t/d.n).toLocaleString()})\n`;
+  });
+  if(mAbiertas.length>0){
+    const abMes={};mAbiertas.forEach(c=>{if(!abMes[c.mesero])abMes[c.mesero]=0;abMes[c.mesero]+=(c.total||0);});
+    txt+=`  Abiertas: `+Object.entries(abMes).map(([m,t])=>`${m} $${t.toLocaleString()}`).join(' · ')+'\n';
+  }
+  if(descTotal>0||cortTotal>0){
+    txt+=`\n━━━ DESCUENTOS Y CORTESÍAS ━━━━━━━━━━━\n`;
+    if(descTotal>0){
+      txt+=`Descuentos: $${descTotal.toLocaleString()}  (${vFilt.filter(v=>v.descuento&&v.descuento.valor>0).length} mesa${vFilt.filter(v=>v.descuento&&v.descuento.valor>0).length!==1?'s':''})\n`;
+      if(descEmpl.length)txt+=`  Empleado 50%: $${descEmpl.reduce((s,v)=>s+v.descuento.valor,0).toLocaleString()}  (${descEmpl.length} mesa${descEmpl.length>1?'s':''})\n`;
+      if(descPct.length)txt+=`  Cliente %:     $${descPct.reduce((s,v)=>s+v.descuento.valor,0).toLocaleString()}  (${descPct.length} mesa${descPct.length>1?'s':''})\n`;
+    }
+    if(cortTotal>0)txt+=`Cortesías:  $${cortTotal.toLocaleString()}\n`;
+  }
+  if(top10.length){
+    txt+=`\n━━━ TOP ${top10.length} PRODUCTOS ━━━━━━━━━━━━━━━━━━\n`;
+    top10.forEach(([n,d],i)=>{txt+=`  ${String(i+1).padStart(2)}. ${n.substring(0,22).padEnd(22)} ${d.q} uds  ($${d.t.toLocaleString()})\n`;});
+  }
+  if(cancTotal>0){
+    txt+=`\n━━━ CANCELACIONES ━━━━━━━━━━━━━━━━━━━━\n`;
+    txt+=`Total: $${cancTotal.toLocaleString()}  (${cFilt.length} cancelaci${cFilt.length!==1?'ones':'ón'})\n`;
+    cFilt.forEach(c=>{
+      const lbl=c.tipo==='mesa_completa'?'[MESA COMPLETA]':c.items.map(it=>it.q+'× '+it.n).join(', ');
+      txt+=`  ${c.hora||'--:--'}  Mesa ${c.mesa} · ${c.mesero} · ${lbl}  $${c.valor.toLocaleString()}\n`;
+    });
+  }
+  if(mAbiertas.length>0){
+    txt+=`\n━━━ MESAS ABIERTAS AL CIERRE ━━━━━━━━━\n`;
+    mAbiertas.forEach(c=>{txt+=`  Mesa ${String(c.mesa).padEnd(4)} · ${c.mesero.padEnd(14)} · $${c.total.toLocaleString()}  desde ${c.hora}\n`;});
+  }
+  if(edits.length>0){
+    txt+=`\n━━━ MODIFICACIONES DE ENCARGADO ━━━━━━\n`;
+    edits.sort((a,b)=>a.ts-b.ts).forEach(e=>{
+      const cambios=e.campos.map(k=>`${k}: ${k==='propina'?fmtProp(e.antes[k]):e.antes[k]} → ${k==='propina'?fmtProp(e.despues[k]):e.despues[k]}`).join(', ');
+      txt+=`  ${e.hora||'--:--'}  Mesa ${e.mesa} · ${e.mesero} · ${cambios}\n`;
+    });
+  }
+  txt+=`\n${'═'.repeat(38)}\n`;
   return txt;
 }
 
@@ -1329,27 +1401,53 @@ function descargarCierreParcial(){
   const total=vMes.reduce((s,v)=>s+v.total,0);
   const propTotal=vMes.reduce((s,v)=>s+(v.propina||0),0);
   const cortTotal=vMes.reduce((s,v)=>s+(v.cortesias||0),0);
+  const descTotal=vMes.reduce((s,v)=>s+((v.descuento&&v.descuento.valor)||0),0);
   const abMes=comandas.filter(c=>c.estado==='abierta'&&c.mesero===mesero);
+  // Cancelaciones del turno (por mesero, en el período)
+  const cMes=cancelaciones.filter(c=>{
+    if(new Date(c.id).toLocaleDateString('es-MX')!==hoy)return false;
+    if(c.mesero!==mesero)return false;
+    if(turnoDesde>0&&c.id<turnoDesde)return false;
+    return true;
+  });
+  const cancTotal=cMes.reduce((s,c)=>s+c.valor,0);
+  // Formas de pago
+  const metodos={};
+  vMes.forEach(v=>{const base=v.pago.startsWith('Mixto')?'Mixto':v.pago;if(!metodos[base])metodos[base]={n:0,t:0};metodos[base].n++;metodos[base].t+=v.total;});
   const turnoLabel=turnoInfo?`${turnoInfo.hora} → ${hora}`:`Todo el día → ${hora}`;
-  let txt=`╔══════════════════════════╗\n`;
-  txt+=`║   CIERRE DE TURNO        ║\n`;
-  txt+=`║   ${mesero.substring(0,22).padEnd(22)}║\n`;
-  txt+=`║   ${hoy.padEnd(26)}║\n`;
-  txt+=`║   ${turnoLabel.substring(0,26).padEnd(26)}║\n`;
-  txt+=`╚══════════════════════════╝\n\n`;
-  txt+=`RESUMEN\n${'─'.repeat(30)}\n`;
-  txt+=`Venta total:    $${total.toLocaleString()}\n`;
-  txt+=`Comandas:       ${vMes.length}\n`;
-  txt+=`Ticket prom.:   $${vMes.length?Math.round(total/vMes.length).toLocaleString():0}\n`;
-  txt+=`Propinas:       $${propTotal.toLocaleString()}\n`;
-  if(cortTotal>0)txt+=`Cortesías:      $${cortTotal.toLocaleString()}\n`;
-  if(abMes.length>0){
-    txt+=`\nMESAS ABIERTAS (quedan activas)\n${'─'.repeat(30)}\n`;
-    abMes.forEach(c=>{txt+=`Mesa ${c.mesa}: $${c.total.toLocaleString()} — desde ${c.hora}\n`;});
+  let txt=`╔══════════════════════════════════════╗\n`;
+  txt+=`║      CIERRE DE TURNO                 ║\n`;
+  txt+=`║  ${mesero.substring(0,36).padEnd(36)}║\n`;
+  txt+=`║  ${hoy.padEnd(36)}║\n`;
+  txt+=`║  ${turnoLabel.substring(0,36).padEnd(36)}║\n`;
+  txt+=`╚══════════════════════════════════════╝\n\n`;
+  txt+=`━━━ RESUMEN ━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  txt+=`Venta del turno:  $${total.toLocaleString()}\n`;
+  txt+=`Comandas cobradas: ${vMes.length}\n`;
+  txt+=`Ticket promedio:  $${vMes.length?Math.round(total/vMes.length).toLocaleString():0}\n`;
+  txt+=`Propinas:         $${propTotal.toLocaleString()}\n`;
+  if(cortTotal>0)txt+=`Cortesías:        $${cortTotal.toLocaleString()}\n`;
+  txt+=`\n━━━ FORMAS DE PAGO ━━━━━━━━━━━━━━━━━━━\n`;
+  Object.entries(metodos).forEach(([m,d])=>{txt+=`${m.padEnd(12)} $${d.t.toLocaleString()}  (${d.n} cmd)\n`;});
+  if(descTotal>0){
+    txt+=`\n━━━ DESCUENTOS ━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    txt+=`Total desc.: $${descTotal.toLocaleString()}  (${vMes.filter(v=>v.descuento&&v.descuento.valor>0).length} mesas)\n`;
   }
-  txt+=`\nDETALLE\n${'─'.repeat(30)}\n`;
-  [...vMes].reverse().forEach(v=>{txt+=`${v.hora} | Mesa ${v.mesa} | ${v.pago} | $${v.total.toLocaleString()}${(v.propina||0)>0?' + propina $'+v.propina.toLocaleString():''}\n`;});
-  txt+=`\n${'═'.repeat(30)}\n`;
+  if(cancTotal>0){
+    txt+=`\n━━━ CANCELACIONES DEL TURNO ━━━━━━━━━━\n`;
+    txt+=`Total: $${cancTotal.toLocaleString()}\n`;
+    cMes.forEach(c=>{
+      const lbl=c.tipo==='mesa_completa'?'[MESA COMPLETA]':c.items.map(it=>it.q+'× '+it.n).join(', ');
+      txt+=`  ${c.hora||'--:--'}  Mesa ${c.mesa} · ${lbl}  $${c.valor.toLocaleString()}\n`;
+    });
+  }
+  if(abMes.length>0){
+    txt+=`\n━━━ MESAS ABIERTAS (quedan activas) ━━\n`;
+    abMes.forEach(c=>{txt+=`  Mesa ${c.mesa}: $${c.total.toLocaleString()} — desde ${c.hora}\n`;});
+  }
+  txt+=`\n━━━ DETALLE COMANDAS ━━━━━━━━━━━━━━━━━\n`;
+  [...vMes].reverse().forEach(v=>{txt+=`${v.hora} | Mesa ${v.mesa} | ${v.pago} | $${v.total.toLocaleString()}${(v.propina||0)>0?' + prop $'+v.propina.toLocaleString():''}\n`;});
+  txt+=`\n${'═'.repeat(38)}\n`;
   try{localStorage.removeItem('i_turno_'+mesero);}catch(e){}
   const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
   const url=URL.createObjectURL(blob);
