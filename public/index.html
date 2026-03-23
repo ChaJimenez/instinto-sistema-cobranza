@@ -1846,13 +1846,18 @@ function renderAdmin(){
     });
   });
   const mpCarneG=mpCarne*80;
+  const mpMerma=Math.round(mpCarneG*0.10);
+  const mpCarneTotal=mpCarneG+mpMerma;
   const mpRows=Object.entries(mpDet).sort((a,b)=>b[1].carne-a[1].carne);
   document.getElementById('adminMP').innerHTML=mpRows.length?`
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
       <div style="background:#0D2A5E;color:#fff;border-radius:12px;padding:16px;text-align:center;">
         <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.6);margin-bottom:8px;">Carne de res</div>
-        <div style="font-size:26px;font-weight:700;">${mpCarneG.toLocaleString()}g</div>
-        <div style="font-size:13px;color:rgba(255,255,255,0.6);margin-top:4px;">${(mpCarneG/1000).toFixed(2)} kg · ${mpCarne} bolita${mpCarne!==1?'s':''}</div>
+        <div style="font-size:26px;font-weight:700;">${mpCarneTotal.toLocaleString()}g</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:4px;">${(mpCarneTotal/1000).toFixed(3)} kg · ${mpCarne} bolita${mpCarne!==1?'s':''}</div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.15);font-size:11px;color:rgba(255,255,255,0.5);">
+          Uso neto ${mpCarneG}g + merma 10% ${mpMerma}g
+        </div>
       </div>
       <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:16px;text-align:center;">
         <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:8px;">Bollos de pan</div>
@@ -1888,16 +1893,29 @@ function renderAdmin(){
           <td style="text-align:center;color:#b06800;">${d.pollo>0?d.pollo:'—'}</td>
         </tr>`).join('')}
         <tr style="background:#f5f5f3;font-weight:700;border-top:2px solid #e0e0e0;">
-          <td>TOTAL</td>
+          <td>Subtotal (uso neto)</td>
           <td style="text-align:center;">${mpRows.reduce((s,[,d])=>s+d.q,0)}</td>
           <td style="text-align:center;">${mpCarne}</td>
           <td style="text-align:center;color:#0D2A5E;">${mpCarneG}g</td>
           <td style="text-align:center;">${mpBollos}</td>
           <td style="text-align:center;color:#b06800;">${mpPollo||'—'}</td>
         </tr>
+        <tr style="background:#fff3cd;border-top:1px dashed #e8a020;">
+          <td style="color:#b06800;">+ Merma estimada (10%)</td>
+          <td colspan="2" style="text-align:center;color:#b06800;">+${Math.round(mpCarne*0.10*10)/10} bolitas</td>
+          <td style="text-align:center;font-weight:700;color:#b06800;">+${mpMerma}g</td>
+          <td colspan="2" style="text-align:center;color:#aaa;">—</td>
+        </tr>
+        <tr style="background:#e8f0fe;border-top:2px solid #0D2A5E;">
+          <td style="font-weight:700;color:#0D2A5E;">TOTAL A COMPRAR</td>
+          <td colspan="2" style="text-align:center;font-weight:700;color:#0D2A5E;">${mpCarne} bolitas</td>
+          <td style="text-align:center;font-weight:700;font-size:15px;color:#0D2A5E;">${mpCarneTotal}g</td>
+          <td style="text-align:center;font-weight:700;color:#0D2A5E;">${mpBollos}</td>
+          <td style="text-align:center;color:#b06800;">${mpPollo||'—'}</td>
+        </tr>
       </tbody>
     </table>
-    <div style="font-size:11px;color:#aaa;padding-top:6px;">Incluye cortesías. Excluye ítems cancelados. 1 bolita = 80g · Doble Doble = 2 bolitas.</div>
+    <div style="font-size:11px;color:#aaa;padding-top:6px;">Incluye cortesías · Excluye cancelados · 1 bolita = 80g · Doble Doble = 2 bolitas · Merma 10% solo aplica a carne.</div>
   `:'<div style="font-size:13px;color:#aaa;padding:16px 0;text-align:center;">Sin hamburguesas vendidas en el período</div>';
 
   // ── EDICIONES DE ENCARGADO ──
