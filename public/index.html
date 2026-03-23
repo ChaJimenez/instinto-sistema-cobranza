@@ -1848,6 +1848,9 @@ function renderAdmin(){
   const mpCarneG=mpCarne*80;
   const mpMerma=Math.round(mpCarneG*0.10);
   const mpCarneTotal=mpCarneG+mpMerma;
+  const mpPolloG=mpPollo*120;
+  const mpMermaPolloG=Math.round(mpPolloG*0.10);
+  const mpPolloTotalG=mpPolloG+mpMermaPolloG;
   const mpMermaPollo=Math.round(mpPollo*0.10*10)/10;
   const mpPolloTotal=mpPollo+mpMermaPollo;
   const mpRows=Object.entries(mpDet).sort((a,b)=>b[1].carne-a[1].carne);
@@ -1868,10 +1871,10 @@ function renderAdmin(){
       </div>
       ${mpPollo>0?`<div style="background:#fff8ed;border:1px solid #e8a020;border-radius:12px;padding:16px;text-align:center;">
         <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#b06800;margin-bottom:8px;">Piezas de pollo</div>
-        <div style="font-size:26px;font-weight:700;color:#b06800;">${mpPolloTotal}</div>
-        <div style="font-size:12px;color:#b06800;opacity:0.7;margin-top:4px;">pieza${mpPolloTotal!==1?'s':''} · con merma 10%</div>
+        <div style="font-size:26px;font-weight:700;color:#b06800;">${mpPolloTotalG}g</div>
+        <div style="font-size:12px;color:#b06800;opacity:0.7;margin-top:4px;">${(mpPolloTotalG/1000).toFixed(3)} kg · ${mpPolloTotal} pieza${mpPolloTotal!==1?'s':''}</div>
         <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(232,160,32,0.3);font-size:11px;color:#c8962a;">
-          Uso neto ${mpPollo} + merma ${mpMermaPollo}
+          Uso neto ${mpPolloG}g + merma 10% ${mpMermaPolloG}g
         </div>
       </div>`:`<div style="background:#f5f5f3;border:1px solid #e8e8e8;border-radius:12px;padding:16px;text-align:center;opacity:0.5;">
         <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#aaa;margin-bottom:8px;">Piezas de pollo</div>
@@ -1909,8 +1912,8 @@ function renderAdmin(){
             <td style="text-align:center;color:#b06800;">${d.carne>0?'+'+mCarne+'g <span style="font-size:10px;color:#ccc;">(10%)</span>':'—'}</td>
             <td style="text-align:center;border-left:2px solid #f0f0f0;">${d.bollo>0?d.bollo:'—'}</td>
             <td style="text-align:center;border-left:2px solid #f0f0f0;color:#b06800;">${d.pollo>0?d.pollo:'—'}</td>
-            <td style="text-align:center;color:#b06800;">${d.pollo>0?d.pollo+' pza':'—'}</td>
-            <td style="text-align:center;color:#b06800;">${d.pollo>0?'+'+mPollo+' <span style="font-size:10px;color:#ccc;">(10%)</span>':'—'}</td>
+            <td style="text-align:center;color:#b06800;font-weight:600;">${d.pollo>0?(d.pollo*120)+'g':'—'}</td>
+            <td style="text-align:center;color:#b06800;">${d.pollo>0?'+'+Math.round(d.pollo*120*0.10)+'g <span style="font-size:10px;color:#ccc;">(10%)</span>':'—'}</td>
           </tr>`;
         }).join('')}
         <tr style="background:#f5f5f3;font-weight:600;border-top:2px solid #e0e0e0;font-size:12px;">
@@ -1921,7 +1924,7 @@ function renderAdmin(){
           <td style="text-align:center;color:#aaa;">—</td>
           <td style="text-align:center;border-left:2px solid #e0e0e0;">${mpBollos}</td>
           <td style="text-align:center;border-left:2px solid #e0e0e0;color:#b06800;">${mpPollo||'—'}</td>
-          <td style="text-align:center;color:#b06800;">${mpPollo>0?mpPollo+' pza':'—'}</td>
+          <td style="text-align:center;color:#b06800;font-weight:600;">${mpPollo>0?mpPolloG+'g':'—'}</td>
           <td style="text-align:center;color:#aaa;">—</td>
         </tr>
         <tr style="background:#fff8e8;border-top:1px dashed #e8a020;font-size:12px;">
@@ -1932,7 +1935,7 @@ function renderAdmin(){
           <td style="text-align:center;color:#b06800;font-weight:600;">10%</td>
           <td style="text-align:center;border-left:2px solid #f0f0f0;color:#aaa;">—</td>
           <td style="text-align:center;border-left:2px solid #f0f0f0;color:#b06800;">${mpPollo>0?'+'+mpMermaPollo:'—'}</td>
-          <td style="text-align:center;color:#b06800;font-weight:600;">${mpPollo>0?'+'+mpMermaPollo+' pza':'—'}</td>
+          <td style="text-align:center;color:#b06800;font-weight:600;">${mpPollo>0?'+'+mpMermaPolloG+'g':'—'}</td>
           <td style="text-align:center;color:#b06800;font-weight:600;">${mpPollo>0?'10%':'—'}</td>
         </tr>
         <tr style="background:#e8f0fe;border-top:2px solid #0D2A5E;font-weight:700;">
@@ -1942,13 +1945,13 @@ function renderAdmin(){
           <td style="text-align:center;font-size:15px;color:#0D2A5E;">${mpCarneTotal}g</td>
           <td style="text-align:center;color:#0D2A5E;">${(mpCarneTotal/1000).toFixed(3)} kg</td>
           <td style="text-align:center;border-left:2px solid #c0d4f5;color:#0D2A5E;">${mpBollos}</td>
-          <td style="text-align:center;border-left:2px solid #c0d4f5;color:#b06800;">${mpPollo>0?mpPollo:'—'}</td>
-          <td style="text-align:center;font-size:15px;color:#b06800;">${mpPollo>0?mpPolloTotal+' pza':'—'}</td>
+          <td style="text-align:center;border-left:2px solid #c0d4f5;color:#b06800;">${mpPollo>0?mpPolloTotal:'—'}</td>
+          <td style="text-align:center;font-size:15px;color:#b06800;">${mpPollo>0?mpPolloTotalG+'g':'—'}</td>
           <td style="text-align:center;color:#aaa;">—</td>
         </tr>
       </tbody>
     </table>
-    <div style="font-size:11px;color:#aaa;padding-top:6px;">Incluye cortesías · Excluye cancelados · 1 bolita = 80g · Doble Doble = 2 bolitas · Merma 10% en carne y pollo.</div>
+    <div style="font-size:11px;color:#aaa;padding-top:6px;">Incluye cortesías · Excluye cancelados · Carne: 1 bolita = 80g · Doble Doble = 2 bolitas · Pollo: 1 pieza = 120g · Merma 10% en ambos.</div>
   `:'<div style="font-size:13px;color:#aaa;padding:16px 0;text-align:center;">Sin hamburguesas vendidas en el período</div>';
 
   // ── EDICIONES DE ENCARGADO ──
