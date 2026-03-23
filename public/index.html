@@ -200,6 +200,16 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
       <div id="propinaDisplay" style="font-size:14px;color:#2d7a2d;margin-bottom:10px;font-weight:500;"></div>
     </div>
   </div>
+  <div class="sec">Descuento</div>
+  <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+    <div class="pago-opt sel" onclick="selDesc(this,null)" style="flex:none;padding:8px 12px;font-size:13px;">Sin descuento</div>
+    <div class="pago-opt" onclick="selDesc(this,'empleado')" style="flex:none;padding:8px 12px;font-size:13px;">👤 Empleado 50%</div>
+    <div class="pago-opt" onclick="selDesc(this,'pct')" style="flex:none;padding:8px 12px;font-size:13px;">% Cliente</div>
+  </div>
+  <div id="descPctWrap" style="display:none;margin-bottom:8px;">
+    <input type="number" id="descPct" placeholder="%" min="0" max="100" step="1" oninput="renderTicket()" style="width:120px;padding:9px 13px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;">
+  </div>
+  <div id="descDisplay" style="font-size:14px;color:#b06800;margin-bottom:10px;font-weight:500;"></div>
   <button class="btn btn-outline" onclick="saveComanda()">Guardar como abierta</button>
   <button class="btn btn-dark" onclick="cobrarComanda()">Cobrar y cerrar mesa</button>
 </div>
@@ -218,8 +228,8 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
   <div class="stat-grid" id="statsGrid"></div>
   <div class="sec">Por forma de pago</div>
   <table class="report-table" id="tblPago"><thead><tr><th>Método</th><th>Comandas</th><th>Venta</th><th>Propinas</th></tr></thead><tbody></tbody></table>
-  <div class="sec">Propinas por mesa</div>
-  <table class="report-table" id="tblPropinas"><thead><tr><th>Hora</th><th>Mesa</th><th>Mesero</th><th>Venta</th><th>Propina</th><th>Pago</th><th></th></tr></thead><tbody></tbody></table>
+  <div class="sec">Ventas del período / Propinas</div>
+  <table class="report-table" id="tblPropinas"><thead><tr><th>Hora</th><th>Mesa</th><th>Mesero</th><th>Venta</th><th>Desc.</th><th>Propina</th><th>Pago</th><th></th></tr></thead><tbody></tbody></table>
   <div class="sec">Por mesero</div>
   <table class="report-table" id="tblMesero"><thead><tr><th>Mesero</th><th>Comandas</th><th>Venta</th><th>Ticket prom.</th></tr></thead><tbody></tbody></table>
   <div class="sec">Productos más vendidos</div>
@@ -350,6 +360,16 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
       </div>
       <div id="propinaModalDisplay" style="font-size:14px;color:#2d7a2d;font-weight:500;margin-top:6px;"></div>
     </div>
+    <div class="sec">Descuento</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+      <div class="pago-opt sel" onclick="selModalDesc(this,null)" style="flex:none;padding:8px 12px;font-size:13px;">Sin descuento</div>
+      <div class="pago-opt" onclick="selModalDesc(this,'empleado')" style="flex:none;padding:8px 12px;font-size:13px;">👤 Empleado 50%</div>
+      <div class="pago-opt" onclick="selModalDesc(this,'pct')" style="flex:none;padding:8px 12px;font-size:13px;">% Cliente</div>
+    </div>
+    <div id="modalDescPctWrap" style="display:none;margin-bottom:8px;">
+      <input type="number" id="modalDescPct" placeholder="%" min="0" max="100" step="1" oninput="actualizarTotalModal()" style="width:120px;padding:9px 13px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;">
+    </div>
+    <div id="modalDescDisplay" style="font-size:14px;color:#b06800;margin-bottom:10px;font-weight:500;"></div>
     <div id="modalAuthSection" style="display:none;">
       <div style="background:#fff8ed;border:1px solid #e8a020;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#b06800;">
         ⚠ Esta cuenta tiene cortesías o cancelaciones. Se requiere autorización del administrador.
@@ -401,6 +421,9 @@ let modalPago="Efectivo", modalIdx=null, modalPropina=0, modalMixtoEf=0, modalMi
 let pinCallback=null;
 let ultimaActualizacion=0;
 let editVentaId=null, editPagoAct='';
+let currentDescuento={tipo:null,pct:0,valor:0};
+let modalDescuento={tipo:null,pct:0,valor:0};
+const BARRA_CATS_FRONT=['Refrescos','Cervezas','Preparados'];
 
 // Formatea propinas con decimales si los tiene (ej: 67.9, no 68)
 function fmtProp(n){
@@ -619,18 +642,31 @@ function renderTicket(){
       </div>
     </div>`;
   }).join('');
-  const propDisplay=currentPago==='Tarjeta'&&currentPropina>0?`<div class="ticket-line green"><span>🎁 Propina</span><span>$${currentPropina.toLocaleString()}</span></div>`:'';
+  const t=totales();
+  const propDisplay=currentPago==='Tarjeta'&&currentPropina>0?`<div class="ticket-line green"><span>🎁 Propina</span><span>${fmtProp(currentPropina)}</span></div>`:'';
+  const descDisplay=t.descValor>0?`<div class="ticket-line amber"><span>🏷 Descuento</span><span>−${fmtProp(t.descValor)}</span></div>`:'';
   document.getElementById('ticketLines').innerHTML=
     (cort>0?`<div class="ticket-line amber"><span>★ Cortesías</span><span>$${cort.toLocaleString()}</span></div>`:'')+
     (canc>0?`<div class="ticket-line red"><span>✕ Cancelados</span><span>$${canc.toLocaleString()}</span></div>`:'')+
-    propDisplay;
-  document.getElementById('ticketTotal').textContent='$'+cobrable.toLocaleString();
+    descDisplay+propDisplay;
+  document.getElementById('ticketTotal').textContent='$'+t.cobrable.toLocaleString();
+  document.getElementById('descDisplay').textContent=t.descValor>0?`Descuento aplicado: −${fmtProp(t.descValor)}`:'';
 }
 
 function totales(){
-  let cobrable=0,cort=0,canc=0;
-  currentItems.forEach(it=>{const v=it.p*it.q;if(it.cancelado)canc+=v;else if(it.cortesia)cort+=v;else cobrable+=v;});
-  return{cobrable,cort,canc};
+  let bruto=0,cort=0,canc=0;
+  currentItems.forEach(it=>{const v=it.p*it.q;if(it.cancelado)canc+=v;else if(it.cortesia)cort+=v;else bruto+=v;});
+  let descValor=0;
+  if(currentDescuento.tipo==='empleado'){
+    const subAlim=currentItems.filter(it=>!it.cancelado&&!it.cortesia&&!BARRA_CATS_FRONT.includes(it.cat)).reduce((s,it)=>s+it.p*it.q,0);
+    descValor=Math.round(subAlim*50)/100;
+  } else if(currentDescuento.tipo==='pct'){
+    const pct=parseFloat(document.getElementById('descPct')?.value)||0;
+    currentDescuento.pct=pct;
+    descValor=Math.round(bruto*pct)/100;
+  }
+  currentDescuento.valor=descValor;
+  return{cobrable:Math.max(0,bruto-descValor),cort,canc,descValor,bruto};
 }
 
 // ── PAGO ──
@@ -788,7 +824,8 @@ function cobrarComanda(){
 
 function buildComanda(estado){
   const t=totales();
-  return{id:editandoId||Date.now(),mesa:document.getElementById('mesa').value.trim(),mesero:document.getElementById('meseroSel').value,items:JSON.parse(JSON.stringify(currentItems)),total:t.cobrable,cortesias:t.cort,cancelados:t.canc,propina:currentPropina,hora:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),fecha:new Date().toLocaleDateString('es-MX'),estado};
+  const desc=t.descValor>0?{tipo:currentDescuento.tipo,pct:currentDescuento.pct,valor:t.descValor}:null;
+  return{id:editandoId||Date.now(),mesa:document.getElementById('mesa').value.trim(),mesero:document.getElementById('meseroSel').value,items:JSON.parse(JSON.stringify(currentItems)),total:t.cobrable,subtotal:t.bruto,descuento:desc,cortesias:t.cort,cancelados:t.canc,propina:currentPropina,hora:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),fecha:new Date().toLocaleDateString('es-MX'),estado};
 }
 
 function guardarCancelacionesItems(){
@@ -808,6 +845,10 @@ function resetForm(){
   document.getElementById('mixtoPropinaDisplay').textContent='';document.getElementById('mixtoError').style.display='none';
   document.getElementById('propinaDisplay').textContent='';
   document.getElementById('editingBanner').classList.remove('show');
+  currentDescuento={tipo:null,pct:0,valor:0};
+  document.querySelectorAll('#screen-nueva .pago-opt[onclick^="selDesc"]').forEach((e,i)=>e.classList.toggle('sel',i===0));
+  document.getElementById('descPctWrap').style.display='none';
+  document.getElementById('descDisplay').textContent='';
   renderTicket();
 }
 
@@ -871,6 +912,10 @@ function abrirCobro(id){
   document.getElementById('modalTotal').textContent='$'+c.total.toLocaleString();
   document.getElementById('modalLines').innerHTML='';
   modalPago='Efectivo';modalMixtoEf=0;modalMixtoTj=0;
+  modalDescuento={tipo:null,pct:0,valor:0};
+  document.querySelectorAll('#modalCobrar .pago-opt[onclick^="selModalDesc"]').forEach((e,i)=>e.classList.toggle('sel',i===0));
+  document.getElementById('modalDescPctWrap').style.display='none';
+  document.getElementById('modalDescDisplay').textContent='';
   document.querySelectorAll('#modalCobrar .pago-opt').forEach((e,i)=>e.classList.toggle('sel',i===0));
   document.getElementById('modalPropinaSection').style.display='none';
   document.getElementById('modalMixtoSection').style.display='none';
@@ -952,12 +997,62 @@ function confirmarCobro(){
   const cancItems=c.items.filter(it=>it.cancelado);
   if(cancItems.length){cancelaciones.push({id:Date.now(),mesa:c.mesa,mesero:c.mesero,items:JSON.parse(JSON.stringify(cancItems)),valor:cancItems.reduce((s,it)=>s+it.p*it.q,0),hora:c.hora,fecha:c.fecha||new Date().toLocaleDateString('es-MX')});}
   const pagoStrModal=modalPago==='Mixto'?`Mixto ($${modalMixtoEf.toLocaleString()} ef / $${modalMixtoTj.toLocaleString()} tj)`:modalPago;
-  const venta={...c,pago:pagoStrModal,propina:modalPropina,estado:'cerrada'};
+  const {bruto,desc,cobrable}=calcDescModal(c);
+  const descObj=desc>0?{tipo:modalDescuento.tipo,pct:modalDescuento.pct,valor:desc}:null;
+  const venta={...c,total:cobrable,subtotal:bruto,descuento:descObj,pago:pagoStrModal,propina:modalPropina,estado:'cerrada'};
   ventas.push(venta);comandas.splice(idx,1);
   guardar();enviarRecibo(venta);
   cerrarModal('modalCobrar');renderAbiertas();toast('Cobrado ✓');
 }
 function cerrarModal(id){document.getElementById(id).classList.remove('open');}
+
+// ── DESCUENTOS ──
+function selDesc(el,tipo){
+  document.querySelectorAll('#screen-nueva .pago-opt[onclick^="selDesc"]').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+  currentDescuento={tipo,pct:0,valor:0};
+  document.getElementById('descPctWrap').style.display=tipo==='pct'?'block':'none';
+  if(tipo!=='pct')document.getElementById('descPct').value='';
+  renderTicket();
+}
+function selModalDesc(el,tipo){
+  document.querySelectorAll('#modalCobrar .pago-opt[onclick^="selModalDesc"]').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+  modalDescuento={tipo,pct:0,valor:0};
+  document.getElementById('modalDescPctWrap').style.display=tipo==='pct'?'block':'none';
+  if(tipo!=='pct')document.getElementById('modalDescPct').value='';
+  actualizarTotalModal();
+}
+function calcDescModal(c){
+  const items=(c.items||[]).filter(it=>!it.cancelado&&!it.cortesia);
+  const bruto=items.reduce((s,it)=>s+it.p*it.q,0);
+  let desc=0;
+  if(modalDescuento.tipo==='empleado'){
+    const alim=items.filter(it=>!BARRA_CATS_FRONT.includes(it.cat)).reduce((s,it)=>s+it.p*it.q,0);
+    desc=Math.round(alim*50)/100;
+  } else if(modalDescuento.tipo==='pct'){
+    const pct=parseFloat(document.getElementById('modalDescPct')?.value)||0;
+    modalDescuento.pct=pct;desc=Math.round(bruto*pct)/100;
+  }
+  modalDescuento.valor=desc;
+  return{bruto,desc,cobrable:Math.max(0,bruto-desc)};
+}
+function actualizarTotalModal(){
+  const c=comandas.find(x=>x.id===modalIdx);if(!c)return;
+  const {bruto,desc,cobrable}=calcDescModal(c);
+  document.getElementById('modalTotal').textContent='$'+cobrable.toLocaleString();
+  document.getElementById('modalDescDisplay').textContent=desc>0?`Descuento aplicado: −${fmtProp(desc)}`:'';
+}
+
+// ── EXCLUIR VENTA DEL REPORTE ──
+function excluirVenta(id){
+  pedirPin(()=>{
+    const idx=ventas.findIndex(x=>x.id===id);if(idx<0)return;
+    ventas[idx]={...ventas[idx],excluida:!ventas[idx].excluida};
+    guardar();renderReporte();
+    toast(ventas[idx].excluida?'Venta excluida del reporte':'Venta reincorporada al reporte');
+  });
+}
 
 // ── EDITAR VENTA CERRADA ──
 function abrirEditVenta(id){
@@ -999,11 +1094,14 @@ function renderReporte(){
   const fmtFecha=(ts)=>new Date(ts).toLocaleDateString('es-MX');
   const matchFecha=(v)=>{if(!fechaFiltro)return true;return fmtFecha(v.id)===new Date(fechaFiltro+'T12:00:00').toLocaleDateString('es-MX');};
   const matchMesero=(v)=>!meseroFiltro||v.mesero===meseroFiltro;
-  const vFilt=ventas.filter(v=>matchFecha(v)&&matchMesero(v));
+  const vTodas=ventas.filter(v=>matchFecha(v)&&matchMesero(v));
+  const vFilt=vTodas.filter(v=>!v.excluida);
+  const vExcl=vTodas.filter(v=>v.excluida);
   const cFilt=cancelaciones.filter(c=>matchFecha(c)&&(!meseroFiltro||c.mesero===meseroFiltro));
   const total=vFilt.reduce((s,v)=>s+v.total,0);
   const cortTotal=vFilt.reduce((s,v)=>s+(v.cortesias||0),0);
   const propTotal=vFilt.reduce((s,v)=>s+(v.propina||0),0);
+  const descTotal=vFilt.reduce((s,v)=>s+((v.descuento&&v.descuento.valor)||0),0);
   const cancTotal=cFilt.reduce((s,c)=>s+c.valor,0);
   const ticket=vFilt.length?Math.round(total/vFilt.length):0;
   document.getElementById('statsGrid').innerHTML=`
@@ -1011,8 +1109,10 @@ function renderReporte(){
     <div class="stat"><label>Comandas</label><div class="val">${vFilt.length}</div></div>
     <div class="stat"><label>Ticket promedio</label><div class="val">$${ticket.toLocaleString()}</div></div>
     <div class="stat"><label>Propinas</label><div class="val green">$${propTotal.toLocaleString()}</div></div>
+    ${descTotal>0?`<div class="stat"><label>Descuentos</label><div class="val amber">$${descTotal.toLocaleString()}</div></div>`:''}
     <div class="stat"><label>Cortesías</label><div class="val amber">$${cortTotal.toLocaleString()}</div></div>
     <div class="stat"><label>Cancelaciones</label><div class="val red">$${cancTotal.toLocaleString()}</div></div>
+    ${vExcl.length?`<div class="stat"><label>Excluidas</label><div class="val" style="color:#aaa;">${vExcl.length}</div></div>`:''}
   `;
   const metodos={};
   vFilt.forEach(v=>{if(!metodos[v.pago])metodos[v.pago]={n:0,t:0,p:0};metodos[v.pago].n++;metodos[v.pago].t+=v.total;metodos[v.pago].p+=(v.propina||0);});
@@ -1037,11 +1137,22 @@ function renderReporte(){
   document.getElementById('tblCancelaciones').querySelector('tbody').innerHTML=cFilt.map(r=>
     `<tr><td>${r.mesa}</td><td>${r.mesero}</td><td>${r.hora}</td><td>${r.items.map(it=>it.q+'× '+it.n).join(', ')}${r.tipo==='mesa_completa'?' <span style="color:#e24b4a;font-size:11px;">(mesa completa)</span>':''}</td><td style="color:#e24b4a;">$${r.valor.toLocaleString()}</td></tr>`
   ).join('')||'<tr><td colspan="5" style="color:#aaa;text-align:center;padding:14px;">Sin cancelaciones</td></tr>';
-  // Propinas por mesa
-  const conPropina=vFilt.filter(v=>(v.propina||0)>0);
-  document.getElementById('tblPropinas').querySelector('tbody').innerHTML=conPropina.length
-    ?conPropina.map(v=>`<tr><td>${v.hora}</td><td>${v.mesa}</td><td>${v.mesero}</td><td>$${v.total.toLocaleString()}</td><td style="color:#2d7a2d;font-weight:600;">${fmtProp(v.propina)}</td><td>${v.pago}</td><td><button class="btn btn-outline btn-sm" onclick="abrirEditVenta(${v.id})" style="font-size:11px;padding:3px 8px;margin:0;">✏</button></td></tr>`).join('')
-    :'<tr><td colspan="7" style="color:#aaa;text-align:center;padding:14px;">Sin propinas en este período</td></tr>';
+  // Todas las ventas (activas + excluidas)
+  document.getElementById('tblPropinas').querySelector('tbody').innerHTML=vTodas.length
+    ?vTodas.map(v=>{
+      const excl=v.excluida;
+      const desc=v.descuento&&v.descuento.valor>0?`<span style="color:#b06800;font-size:12px;">−${fmtProp(v.descuento.valor)}</span>`:'—';
+      const prop=(v.propina||0)>0?`<span style="color:#2d7a2d;font-weight:600;">${fmtProp(v.propina)}</span>`:'—';
+      const exclBadge=excl?'<span style="font-size:10px;background:#f0f0f0;color:#aaa;border-radius:4px;padding:1px 5px;margin-left:4px;">EXCLUIDA</span>':'';
+      return `<tr style="${excl?'opacity:0.45;':''}">
+        <td>${v.hora}</td><td>${v.mesa}${exclBadge}</td><td>${v.mesero}</td>
+        <td>$${v.total.toLocaleString()}</td><td>${desc}</td><td>${prop}</td><td>${v.pago}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-outline btn-sm" onclick="abrirEditVenta(${v.id})" style="font-size:11px;padding:3px 6px;margin:0 2px 0 0;">✏</button>
+          <button class="btn btn-outline btn-sm" onclick="excluirVenta(${v.id})" style="font-size:11px;padding:3px 6px;margin:0;${excl?'border-color:#2d7a2d;color:#2d7a2d;':'border-color:#e24b4a;color:#e24b4a;'}" title="${excl?'Reincorporar':'Excluir del reporte'}">${excl?'↩':'⊘'}</button>
+        </td></tr>`;
+    }).join('')
+    :'<tr><td colspan="8" style="color:#aaa;text-align:center;padding:14px;">Sin ventas en este período</td></tr>';
   // Ediciones de encargado
   const edits=[];
   vFilt.forEach(v=>{(v.editLog||[]).forEach(e=>edits.push({...e,mesa:v.mesa,mesero:v.mesero}));});
