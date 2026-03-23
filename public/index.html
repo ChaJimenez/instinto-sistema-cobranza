@@ -1880,44 +1880,71 @@ function renderAdmin(){
       </div>`}
     </div>
     <table class="report-table" style="margin-bottom:8px;">
-      <thead><tr>
-        <th>Producto</th>
-        <th style="text-align:center;">Vendidos</th>
-        <th style="text-align:center;">Bolitas carne</th>
-        <th style="text-align:center;">Gramos res</th>
-        <th style="text-align:center;">Bollos</th>
-        <th style="text-align:center;">Pollo</th>
-      </tr></thead>
+      <thead>
+        <tr>
+          <th rowspan="2">Producto</th>
+          <th rowspan="2" style="text-align:center;">Vendidos</th>
+          <th colspan="3" style="text-align:center;border-left:2px solid #e0e0e0;background:#f0f4ff;color:#0D2A5E;">Carne de res</th>
+          <th rowspan="2" style="text-align:center;border-left:2px solid #e0e0e0;">Bollos</th>
+          <th colspan="3" style="text-align:center;border-left:2px solid #e0e0e0;background:#fff8ed;color:#b06800;">Pollo</th>
+        </tr>
+        <tr>
+          <th style="text-align:center;border-left:2px solid #e0e0e0;background:#f0f4ff;font-size:10px;">Bolitas</th>
+          <th style="text-align:center;background:#f0f4ff;font-size:10px;">Uso neto</th>
+          <th style="text-align:center;background:#fff3cd;color:#b06800;font-size:10px;">Merma probable</th>
+          <th style="text-align:center;border-left:2px solid #e0e0e0;background:#fff8ed;font-size:10px;">Piezas</th>
+          <th style="text-align:center;background:#fff8ed;font-size:10px;">Uso neto</th>
+          <th style="text-align:center;background:#fff3cd;color:#b06800;font-size:10px;">Merma probable</th>
+        </tr>
+      </thead>
       <tbody>
-        ${mpRows.map(([n,d])=>`<tr>
-          <td style="font-weight:500;">${n}</td>
-          <td style="text-align:center;">${d.q}</td>
-          <td style="text-align:center;">${d.carne>0?d.carne:'—'}</td>
-          <td style="text-align:center;font-weight:600;color:#0D2A5E;">${d.carne>0?(d.carne*80)+'g':'—'}</td>
-          <td style="text-align:center;">${d.bollo>0?d.bollo:'—'}</td>
-          <td style="text-align:center;color:#b06800;">${d.pollo>0?d.pollo:'—'}</td>
-        </tr>`).join('')}
-        <tr style="background:#f5f5f3;font-weight:700;border-top:2px solid #e0e0e0;">
-          <td>Subtotal (uso neto)</td>
+        ${mpRows.map(([n,d])=>{
+          const mCarne=d.carne>0?Math.round(d.carne*80*0.10):0;
+          const mPollo=d.pollo>0?Math.round(d.pollo*0.10*10)/10:0;
+          return`<tr>
+            <td style="font-weight:500;">${n}</td>
+            <td style="text-align:center;">${d.q}</td>
+            <td style="text-align:center;border-left:2px solid #f0f0f0;">${d.carne>0?d.carne:'—'}</td>
+            <td style="text-align:center;color:#0D2A5E;font-weight:600;">${d.carne>0?(d.carne*80)+'g':'—'}</td>
+            <td style="text-align:center;color:#b06800;">${d.carne>0?'+'+mCarne+'g <span style="font-size:10px;color:#ccc;">(10%)</span>':'—'}</td>
+            <td style="text-align:center;border-left:2px solid #f0f0f0;">${d.bollo>0?d.bollo:'—'}</td>
+            <td style="text-align:center;border-left:2px solid #f0f0f0;color:#b06800;">${d.pollo>0?d.pollo:'—'}</td>
+            <td style="text-align:center;color:#b06800;">${d.pollo>0?d.pollo+' pza':'—'}</td>
+            <td style="text-align:center;color:#b06800;">${d.pollo>0?'+'+mPollo+' <span style="font-size:10px;color:#ccc;">(10%)</span>':'—'}</td>
+          </tr>`;
+        }).join('')}
+        <tr style="background:#f5f5f3;font-weight:600;border-top:2px solid #e0e0e0;font-size:12px;">
+          <td>Uso neto</td>
           <td style="text-align:center;">${mpRows.reduce((s,[,d])=>s+d.q,0)}</td>
-          <td style="text-align:center;">${mpCarne}</td>
+          <td style="text-align:center;border-left:2px solid #e0e0e0;">${mpCarne}</td>
           <td style="text-align:center;color:#0D2A5E;">${mpCarneG}g</td>
-          <td style="text-align:center;">${mpBollos}</td>
-          <td style="text-align:center;color:#b06800;">${mpPollo||'—'}</td>
-        </tr>
-        <tr style="background:#fff3cd;border-top:1px dashed #e8a020;">
-          <td style="color:#b06800;">+ Merma estimada (10%)</td>
-          <td colspan="2" style="text-align:center;color:#b06800;">+${Math.round(mpCarne*0.10*10)/10} bolitas</td>
-          <td style="text-align:center;font-weight:700;color:#b06800;">+${mpMerma}g</td>
           <td style="text-align:center;color:#aaa;">—</td>
-          <td style="text-align:center;color:#b06800;">${mpPollo>0?'+'+mpMermaPollo:'—'}</td>
+          <td style="text-align:center;border-left:2px solid #e0e0e0;">${mpBollos}</td>
+          <td style="text-align:center;border-left:2px solid #e0e0e0;color:#b06800;">${mpPollo||'—'}</td>
+          <td style="text-align:center;color:#b06800;">${mpPollo>0?mpPollo+' pza':'—'}</td>
+          <td style="text-align:center;color:#aaa;">—</td>
         </tr>
-        <tr style="background:#e8f0fe;border-top:2px solid #0D2A5E;">
-          <td style="font-weight:700;color:#0D2A5E;">TOTAL A COMPRAR</td>
-          <td colspan="2" style="text-align:center;font-weight:700;color:#0D2A5E;">${mpCarne} bolitas</td>
-          <td style="text-align:center;font-weight:700;font-size:15px;color:#0D2A5E;">${mpCarneTotal}g</td>
-          <td style="text-align:center;font-weight:700;color:#0D2A5E;">${mpBollos}</td>
-          <td style="text-align:center;font-weight:700;color:#b06800;">${mpPollo>0?mpPolloTotal:'—'}</td>
+        <tr style="background:#fff8e8;border-top:1px dashed #e8a020;font-size:12px;">
+          <td style="color:#b06800;font-weight:600;">Merma probable (10%)</td>
+          <td style="text-align:center;color:#aaa;">—</td>
+          <td style="text-align:center;border-left:2px solid #f0f0f0;color:#b06800;">+${Math.round(mpCarne*0.10*10)/10}</td>
+          <td style="text-align:center;color:#b06800;font-weight:600;">+${mpMerma}g</td>
+          <td style="text-align:center;color:#b06800;font-weight:600;">10%</td>
+          <td style="text-align:center;border-left:2px solid #f0f0f0;color:#aaa;">—</td>
+          <td style="text-align:center;border-left:2px solid #f0f0f0;color:#b06800;">${mpPollo>0?'+'+mpMermaPollo:'—'}</td>
+          <td style="text-align:center;color:#b06800;font-weight:600;">${mpPollo>0?'+'+mpMermaPollo+' pza':'—'}</td>
+          <td style="text-align:center;color:#b06800;font-weight:600;">${mpPollo>0?'10%':'—'}</td>
+        </tr>
+        <tr style="background:#e8f0fe;border-top:2px solid #0D2A5E;font-weight:700;">
+          <td style="color:#0D2A5E;">TOTAL A COMPRAR</td>
+          <td style="text-align:center;color:#0D2A5E;">${mpRows.reduce((s,[,d])=>s+d.q,0)}</td>
+          <td style="text-align:center;border-left:2px solid #c0d4f5;color:#0D2A5E;">${mpCarne}</td>
+          <td style="text-align:center;font-size:15px;color:#0D2A5E;">${mpCarneTotal}g</td>
+          <td style="text-align:center;color:#0D2A5E;">${(mpCarneTotal/1000).toFixed(3)} kg</td>
+          <td style="text-align:center;border-left:2px solid #c0d4f5;color:#0D2A5E;">${mpBollos}</td>
+          <td style="text-align:center;border-left:2px solid #c0d4f5;color:#b06800;">${mpPollo>0?mpPollo:'—'}</td>
+          <td style="text-align:center;font-size:15px;color:#b06800;">${mpPollo>0?mpPolloTotal+' pza':'—'}</td>
+          <td style="text-align:center;color:#aaa;">—</td>
         </tr>
       </tbody>
     </table>
