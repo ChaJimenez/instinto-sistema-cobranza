@@ -218,6 +218,8 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
   <div class="stat-grid" id="statsGrid"></div>
   <div class="sec">Por forma de pago</div>
   <table class="report-table" id="tblPago"><thead><tr><th>Método</th><th>Comandas</th><th>Venta</th><th>Propinas</th></tr></thead><tbody></tbody></table>
+  <div class="sec">Propinas por mesa</div>
+  <table class="report-table" id="tblPropinas"><thead><tr><th>Hora</th><th>Mesa</th><th>Mesero</th><th>Venta</th><th>Propina</th><th>Pago</th><th></th></tr></thead><tbody></tbody></table>
   <div class="sec">Por mesero</div>
   <table class="report-table" id="tblMesero"><thead><tr><th>Mesero</th><th>Comandas</th><th>Venta</th><th>Ticket prom.</th></tr></thead><tbody></tbody></table>
   <div class="sec">Productos más vendidos</div>
@@ -226,6 +228,8 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
   <table class="report-table" id="tblCortesias"><thead><tr><th>Mesa</th><th>Mesero</th><th>Hora</th><th>Productos</th><th>Valor</th></tr></thead><tbody></tbody></table>
   <div class="sec">Cancelaciones del período</div>
   <table class="report-table" id="tblCancelaciones"><thead><tr><th>Mesa</th><th>Mesero</th><th>Hora</th><th>Productos</th><th>Valor</th></tr></thead><tbody></tbody></table>
+  <div class="sec" id="secEdiciones" style="display:none;color:#e24b4a;">⚠ Ediciones de encargado</div>
+  <table class="report-table" id="tblEdiciones" style="display:none;"><thead><tr><th>Hora</th><th>Venta</th><th>Campo</th><th>Antes</th><th>Después</th></tr></thead><tbody></tbody></table>
 </div>
 
 <!-- CIERRE DEL DÍA -->
@@ -273,6 +277,26 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
     <button class="btn btn-outline btn-sm" onclick="exportarBackup()">⬇ Exportar backup JSON</button>
     <button class="btn btn-outline btn-sm" onclick="document.getElementById('fileImport').click()">⬆ Importar backup</button>
     <input type="file" id="fileImport" accept=".json" style="display:none;" onchange="importarBackup(this)" />
+  </div>
+</div>
+
+<!-- MODAL: editar venta cerrada -->
+<div class="modal-bg" id="modalEditVenta">
+  <div class="modal">
+    <div style="font-weight:600;font-size:16px;margin-bottom:12px;">✏ Editar venta cerrada</div>
+    <div id="editVentaInfo" style="font-size:13px;color:#555;background:#f5f5f3;padding:12px;border-radius:8px;margin-bottom:16px;line-height:1.6;"></div>
+    <div class="sec">PIN de encargado</div>
+    <input type="password" id="editPin" placeholder="Contraseña" style="width:100%;padding:10px 13px;border:1px solid #ddd;border-radius:8px;font-size:16px;outline:none;margin-bottom:6px;letter-spacing:0.15em;" onkeydown="if(event.key==='Enter')guardarEdicionVenta()">
+    <div id="editPinError" class="pin-error" style="margin-bottom:12px;min-height:18px;"></div>
+    <div class="sec">Nueva propina</div>
+    <input type="number" id="editPropina" placeholder="0" min="0" step="0.01" style="width:100%;padding:10px 13px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;margin-bottom:14px;">
+    <div class="sec">Forma de pago</div>
+    <div class="pago-opts" style="margin-bottom:20px;">
+      <div class="pago-opt" onclick="selEditPago(this,'Efectivo')">💵 Efectivo</div>
+      <div class="pago-opt" onclick="selEditPago(this,'Tarjeta')">💳 Tarjeta</div>
+    </div>
+    <button class="btn btn-dark" onclick="guardarEdicionVenta()">✓ Guardar cambio</button>
+    <button class="btn btn-outline" onclick="cerrarModal('modalEditVenta')">Cancelar</button>
   </div>
 </div>
 
@@ -376,6 +400,15 @@ let comandas=[], ventas=[], meseros=[], cancelaciones=[];
 let modalPago="Efectivo", modalIdx=null, modalPropina=0, modalMixtoEf=0, modalMixtoTj=0;
 let pinCallback=null;
 let ultimaActualizacion=0;
+let editVentaId=null, editPagoAct='';
+
+// Formatea propinas con decimales si los tiene (ej: 67.9, no 68)
+function fmtProp(n){
+  if(!n&&n!==0)return '$0';
+  const v=Math.round(n*100)/100;
+  if(v%1===0)return '$'+v.toLocaleString();
+  return '$'+v.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
+}
 
 // ── CAPA DE DATOS (API) ──
 async function cargarDatos(){
@@ -638,8 +671,8 @@ function validarMixto(total){
 function selPropinaM(el,pct){
   document.querySelectorAll('#mixtoSection .propina-btn').forEach(b=>b.classList.remove('sel'));
   el.classList.add('sel');document.getElementById('mixtoPropinaCustom').value='';
-  currentPropina=pct>0?Math.round(currentMixtoTj*pct/100):0;
-  document.getElementById('mixtoPropinaDisplay').textContent=currentPropina>0?`Propina: $${currentPropina.toLocaleString()} (${pct}%)`:'Sin propina';
+  currentPropina=pct>0?Math.round(currentMixtoTj*pct)/100:0;
+  document.getElementById('mixtoPropinaDisplay').textContent=currentPropina>0?`Propina: ${fmtProp(currentPropina)} (${pct}%)`:'Sin propina';
 }
 function setPropinaM(val){
   document.querySelectorAll('#mixtoSection .propina-btn').forEach(b=>b.classList.remove('sel'));
@@ -651,8 +684,8 @@ function selPropina(el,pct){
   el.classList.add('sel');
   document.getElementById('propinaCustom').value='';
   const base=totales().cobrable;
-  currentPropina=pct>0?Math.round(base*pct/100):0;
-  document.getElementById('propinaDisplay').textContent=currentPropina>0?`Propina: $${currentPropina.toLocaleString()} (${pct}%)`:'Sin propina';
+  currentPropina=pct>0?Math.round(base*pct)/100:0;
+  document.getElementById('propinaDisplay').textContent=currentPropina>0?`Propina: ${fmtProp(currentPropina)} (${pct}%)`:'Sin propina';
   renderTicket();
 }
 function setPropinaCustom(val){
@@ -883,8 +916,8 @@ function validarMixtoModal(total){
 function selPropinaMMod(el,pct){
   document.querySelectorAll('#modalMixtoSection .propina-btn').forEach(b=>b.classList.remove('sel'));
   el.classList.add('sel');document.getElementById('modalMixtoPropinaCustom').value='';
-  modalPropina=pct>0?Math.round(modalMixtoTj*pct/100):0;
-  document.getElementById('modalMixtoPropinaDisplay').textContent=modalPropina>0?`Propina: $${modalPropina.toLocaleString()} (${pct}%)`:'Sin propina';
+  modalPropina=pct>0?Math.round(modalMixtoTj*pct)/100:0;
+  document.getElementById('modalMixtoPropinaDisplay').textContent=modalPropina>0?`Propina: ${fmtProp(modalPropina)} (${pct}%)`:'Sin propina';
 }
 function setPropinaMMod(val){
   document.querySelectorAll('#modalMixtoSection .propina-btn').forEach(b=>b.classList.remove('sel'));
@@ -895,8 +928,8 @@ function selPropinaModal(el,pct){
   document.querySelectorAll('#modalCobrar .propina-btn').forEach(b=>b.classList.remove('sel'));
   el.classList.add('sel');document.getElementById('propinaModalCustom').value='';
   const c=comandas.find(x=>x.id===modalIdx);
-  modalPropina=pct>0?Math.round((c?c.total:0)*pct/100):0;
-  document.getElementById('propinaModalDisplay').textContent=modalPropina>0?`Propina: $${modalPropina.toLocaleString()} (${pct}%)`:'Sin propina';
+  modalPropina=pct>0?Math.round((c?c.total:0)*pct)/100:0;
+  document.getElementById('propinaModalDisplay').textContent=modalPropina>0?`Propina: ${fmtProp(modalPropina)} (${pct}%)`:'Sin propina';
   actualizarModalLines();
 }
 function setPropinaModalCustom(val){
@@ -925,6 +958,39 @@ function confirmarCobro(){
   cerrarModal('modalCobrar');renderAbiertas();toast('Cobrado ✓');
 }
 function cerrarModal(id){document.getElementById(id).classList.remove('open');}
+
+// ── EDITAR VENTA CERRADA ──
+function abrirEditVenta(id){
+  const v=ventas.find(x=>x.id===id);if(!v)return;
+  editVentaId=id;editPagoAct=v.pago;
+  document.getElementById('editVentaInfo').innerHTML=`Mesa ${v.mesa} · ${v.mesero} · ${v.hora}<br>Venta: <strong>$${v.total.toLocaleString()}</strong> &nbsp;·&nbsp; Propina actual: <strong>${fmtProp(v.propina||0)}</strong> &nbsp;·&nbsp; Pago: <strong>${v.pago}</strong>`;
+  document.getElementById('editPropina').value=v.propina||0;
+  document.getElementById('editPin').value='';
+  document.getElementById('editPinError').textContent='';
+  document.querySelectorAll('#modalEditVenta .pago-opt').forEach(el=>{
+    el.classList.toggle('sel',el.textContent.includes(editPagoAct.split(' ')[0])||editPagoAct.includes(el.textContent.includes('Efectivo')?'Efectivo':'Tarjeta'));
+  });
+  document.getElementById('modalEditVenta').classList.add('open');
+}
+function selEditPago(el,tipo){
+  document.querySelectorAll('#modalEditVenta .pago-opt').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');editPagoAct=tipo;
+}
+function guardarEdicionVenta(){
+  const pin=document.getElementById('editPin').value;
+  if(pin!==PIN){document.getElementById('editPinError').textContent='Contraseña incorrecta';document.getElementById('editPin').value='';return;}
+  const idx=ventas.findIndex(x=>x.id===editVentaId);if(idx<0)return;
+  const v=ventas[idx];
+  const nuevaPropina=parseFloat(document.getElementById('editPropina').value)||0;
+  const antes={},despues={};
+  const campos=[];
+  if(Math.round(nuevaPropina*100)!==Math.round((v.propina||0)*100)){campos.push('propina');antes.propina=v.propina||0;despues.propina=nuevaPropina;}
+  if(editPagoAct&&editPagoAct!==v.pago){campos.push('pago');antes.pago=v.pago;despues.pago=editPagoAct;}
+  if(!campos.length){cerrarModal('modalEditVenta');return;}
+  const log={ts:Date.now(),hora:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),campos,antes,despues};
+  ventas[idx]={...v,propina:nuevaPropina,pago:editPagoAct||v.pago,editLog:[...(v.editLog||[]),log]};
+  guardar();cerrarModal('modalEditVenta');renderReporte();toast('Cambio de encargado registrado ✓');
+}
 
 // ── REPORTE ──
 function renderReporte(){
@@ -971,6 +1037,22 @@ function renderReporte(){
   document.getElementById('tblCancelaciones').querySelector('tbody').innerHTML=cFilt.map(r=>
     `<tr><td>${r.mesa}</td><td>${r.mesero}</td><td>${r.hora}</td><td>${r.items.map(it=>it.q+'× '+it.n).join(', ')}${r.tipo==='mesa_completa'?' <span style="color:#e24b4a;font-size:11px;">(mesa completa)</span>':''}</td><td style="color:#e24b4a;">$${r.valor.toLocaleString()}</td></tr>`
   ).join('')||'<tr><td colspan="5" style="color:#aaa;text-align:center;padding:14px;">Sin cancelaciones</td></tr>';
+  // Propinas por mesa
+  const conPropina=vFilt.filter(v=>(v.propina||0)>0);
+  document.getElementById('tblPropinas').querySelector('tbody').innerHTML=conPropina.length
+    ?conPropina.map(v=>`<tr><td>${v.hora}</td><td>${v.mesa}</td><td>${v.mesero}</td><td>$${v.total.toLocaleString()}</td><td style="color:#2d7a2d;font-weight:600;">${fmtProp(v.propina)}</td><td>${v.pago}</td><td><button class="btn btn-outline btn-sm" onclick="abrirEditVenta(${v.id})" style="font-size:11px;padding:3px 8px;margin:0;">✏</button></td></tr>`).join('')
+    :'<tr><td colspan="7" style="color:#aaa;text-align:center;padding:14px;">Sin propinas en este período</td></tr>';
+  // Ediciones de encargado
+  const edits=[];
+  vFilt.forEach(v=>{(v.editLog||[]).forEach(e=>edits.push({...e,mesa:v.mesa,mesero:v.mesero}));});
+  const hayEdits=edits.length>0;
+  document.getElementById('secEdiciones').style.display=hayEdits?'':'none';
+  document.getElementById('tblEdiciones').style.display=hayEdits?'':'none';
+  if(hayEdits)document.getElementById('tblEdiciones').querySelector('tbody').innerHTML=edits.sort((a,b)=>a.ts-b.ts).map(e=>{
+    const ant=Object.entries(e.antes).map(([k,v])=>k+': '+(k==='propina'?fmtProp(v):v)).join(', ');
+    const des=Object.entries(e.despues).map(([k,v])=>k+': '+(k==='propina'?fmtProp(v):v)).join(', ');
+    return `<tr><td>${e.hora||''}</td><td>Mesa ${e.mesa} · ${e.mesero}</td><td>${e.campos.join(', ')}</td><td style="color:#e24b4a;">${ant}</td><td style="color:#2d7a2d;">${des}</td></tr>`;
+  }).join('');
 }
 
 function generarTextoCierre(fecha){
