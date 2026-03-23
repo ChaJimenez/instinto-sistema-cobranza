@@ -405,17 +405,39 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
 
     <!-- Panel de configuración inicial -->
     <div id="invConfigPanel" style="display:none;background:#f9f9f9;border:1px solid #e8e8e8;border-radius:10px;padding:16px;margin-bottom:16px;">
-      <div style="font-size:13px;font-weight:600;margin-bottom:12px;">Inventario inicial — Día 1</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Carne de res (kg)</div><input type="number" id="invInitCarne" step="0.001" min="0" placeholder="0.000" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Pollo (kg)</div><input type="number" id="invInitPollo" step="0.001" min="0" placeholder="0.000" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Bollos (pzas)</div><input type="number" id="invInitBollos" step="1" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Inventario inicial — Día 1</div>
+      <div style="background:#fff8ed;border:1px solid #e8a020;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px;">
+        <div style="flex:1;">
+          <div style="font-size:12px;font-weight:600;color:#b06800;margin-bottom:6px;">Fecha de inicio (Día 1) — retroactivo</div>
+          <input type="date" id="invFechaInicio" style="padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;background:#fff;" />
+        </div>
+        <div style="font-size:11px;color:#888;max-width:240px;">Todas las ventas desde esta fecha se contarán en el uso acumulado. Ajústala para incluir días anteriores.</div>
       </div>
-      <div style="font-size:13px;font-weight:600;margin-bottom:8px;margin-top:4px;">Mínimos para alerta de compra</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Carne mínimo (kg)</div><input type="number" id="invMinCarne" step="0.001" min="0" placeholder="0.500" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Pollo mínimo (kg)</div><input type="number" id="invMinPollo" step="0.001" min="0" placeholder="0.240" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Bollos mínimo (pzas)</div><input type="number" id="invMinBollos" step="1" min="0" placeholder="8" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Carne de res (kg)</div><input type="number" id="invInit_carne" step="0.001" min="0" placeholder="0.000" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Pollo (kg)</div><input type="number" id="invInit_pollo" step="0.001" min="0" placeholder="0.000" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Bollos (pzas)</div><input type="number" id="invInit_bollos" step="1" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Papa natural (kg)</div><input type="number" id="invInit_papa" step="0.001" min="0" placeholder="0.000" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Queso americano (pzas)</div><input type="number" id="invInit_qamerica" step="1" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Queso suizo (pzas)</div><input type="number" id="invInit_qsuizo" step="1" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
+      </div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Mínimos para alerta</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Carne mín. (kg)</div><input type="number" id="invMin_carne" step="0.001" min="0" placeholder="0.500" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Pollo mín. (kg)</div><input type="number" id="invMin_pollo" step="0.001" min="0" placeholder="0.240" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Bollos mín. (pzas)</div><input type="number" id="invMin_bollos" step="1" min="0" placeholder="8" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Papa mín. (kg)</div><input type="number" id="invMin_papa" step="0.001" min="0" placeholder="1.000" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Q. americano mín. (pzas)</div><input type="number" id="invMin_qamerica" step="1" min="0" placeholder="10" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Q. suizo mín. (pzas)</div><input type="number" id="invMin_qsuizo" step="1" min="0" placeholder="10" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+      </div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Proveedores</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Carne de res</div><input type="text" id="invProv_carne" placeholder="Alma Alexis" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Pollo</div><input type="text" id="invProv_pollo" placeholder="—" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Bollos de pan</div><input type="text" id="invProv_bollos" placeholder="Pan" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Papa natural</div><input type="text" id="invProv_papa" placeholder="Oscar Caballero" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Queso americano</div><input type="text" id="invProv_qamerica" placeholder="Kirkland" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Queso suizo</div><input type="text" id="invProv_qsuizo" placeholder="Kirkland" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
       </div>
       <button class="btn btn-dark btn-sm" onclick="guardarInvConfig()" style="background:#2d7a2d;border-color:#2d7a2d;">✓ Guardar y activar Día 1</button>
     </div>
@@ -575,14 +597,18 @@ const EXTRAS=[{n:"Crispy onions",p:35},{n:"Extra carne",p:55},{n:"Puré de papa"
 
 // ── MATERIA PRIMA — Config de insumos por producto ──
 // carne: bolitas de 80g de res · bollo: piezas de pan · pollo: piezas de pollo
+// Recetas: carne=bolitas×80g, pollo=piezas×120g, bollo=pan, papa=gramos, qamerica/qsuizo=rebanadas
 const MP={
-  'Cheeseburger Clásica':      {carne:1, bollo:1, pollo:0},
-  'Doble Doble':               {carne:2, bollo:1, pollo:0},  // doble patty = 2×80g
-  'Hamburguesa con Tocino':    {carne:1, bollo:1, pollo:0},
-  'Crispy Chicken Hot Honey':  {carne:0, bollo:1, pollo:1},
-  'Vegetariana':               {carne:0, bollo:1, pollo:0},
-  'Burger + Papas + Refresco': {carne:1, bollo:1, pollo:0},
-  'Extra carne':               {carne:1, bollo:0, pollo:0},  // extra de menú
+  'Cheeseburger Clásica':            {carne:1, bollo:1, pollo:0, papa:0,   qamerica:1, qsuizo:0},
+  'Doble Doble':                     {carne:2, bollo:1, pollo:0, papa:0,   qamerica:1, qsuizo:1},
+  'Hamburguesa con Tocino':          {carne:2, bollo:1, pollo:0, papa:0,   qamerica:1, qsuizo:1}, // doble carne según menú
+  'Crispy Chicken Hot Honey':        {carne:0, bollo:1, pollo:1, papa:0,   qamerica:0, qsuizo:0},
+  'Vegetariana':                     {carne:0, bollo:1, pollo:0, papa:0,   qamerica:1, qsuizo:0}, // carne vegetal, no res
+  'Burger + Papas + Refresco':       {carne:1, bollo:1, pollo:0, papa:150, qamerica:1, qsuizo:0}, // combo = cheese + papas
+  'Extra carne':                     {carne:1, bollo:0, pollo:0, papa:0,   qamerica:0, qsuizo:0},
+  'Papas Fritas':                    {carne:0, bollo:0, pollo:0, papa:150, qamerica:0, qsuizo:0},
+  'Papas con Salsa de Queso y Tocino':{carne:0,bollo:0, pollo:0, papa:200, qamerica:0, qsuizo:0},
+  'Chicharrón Carnoso':              {carne:0, bollo:0, pollo:0, papa:200, qamerica:0, qsuizo:0},
 };
 
 // ── ESTADO EN MEMORIA ──
@@ -1634,62 +1660,103 @@ function descargarCierreParcial(){
 function fmtKg(g){return(g/1000).toFixed(3)+' kg';}
 
 // ── INVENTARIO ──
-let inventario={v:1,diaInicio:null,stockInicial:{carne:0,pollo:0,bollos:0},compras:[],minimos:{carne:0.500,pollo:0.240,bollos:8}};
-function cargarInventario(){try{const s=localStorage.getItem('i_inv');if(s)inventario=JSON.parse(s);}catch(e){}}
+// Catálogo de ingredientes: auto=calculado desde ventas | manual=solo compras
+const INV_INGS=[
+  {key:'carne',   label:'Carne de res',    unidad:'kg',  auto:true, step:'0.001',defMin:0.500, fmt:v=>v.toFixed(3)+' kg'},
+  {key:'pollo',   label:'Pollo',           unidad:'kg',  auto:true, step:'0.001',defMin:0.240, fmt:v=>v.toFixed(3)+' kg'},
+  {key:'bollos',  label:'Bollos de pan',   unidad:'pzas',auto:true, step:'1',    defMin:8,     fmt:v=>Math.round(v)+' pzas'},
+  {key:'papa',    label:'Papa natural',    unidad:'kg',  auto:false,step:'0.001',defMin:1.000, fmt:v=>v.toFixed(3)+' kg'},
+  {key:'qamerica',label:'Queso americano', unidad:'pzas',auto:false,step:'1',    defMin:10,    fmt:v=>Math.round(v)+' pzas'},
+  {key:'qsuizo',  label:'Queso suizo',     unidad:'pzas',auto:false,step:'1',    defMin:10,    fmt:v=>Math.round(v)+' pzas'},
+];
+const INV_PROVS_DEFAULT={carne:'Alma Alexis',pollo:'',bollos:'Pan',papa:'Oscar Caballero',qamerica:'Kirkland',qsuizo:'Kirkland'};
+let inventario={
+  v:2,diaInicio:null,
+  stockInicial:{carne:0,pollo:0,bollos:0,papa:0,qamerica:0,qsuizo:0},
+  compras:[],
+  minimos:{carne:0.500,pollo:0.240,bollos:8,papa:1.000,qamerica:10,qsuizo:10},
+  proveedores:{...INV_PROVS_DEFAULT}
+};
+function cargarInventario(){
+  try{
+    const s=localStorage.getItem('i_inv');
+    if(s){
+      const d=JSON.parse(s);
+      inventario={...inventario,...d};
+      // Migración v1→v2: añadir ingredientes nuevos y proveedores si faltan
+      INV_INGS.forEach(i=>{
+        if(inventario.stockInicial[i.key]===undefined)inventario.stockInicial[i.key]=0;
+        if(inventario.minimos[i.key]===undefined)inventario.minimos[i.key]=i.defMin;
+      });
+      if(!inventario.proveedores)inventario.proveedores={...INV_PROVS_DEFAULT};
+      else INV_INGS.forEach(i=>{if(!inventario.proveedores[i.key]&&INV_PROVS_DEFAULT[i.key])inventario.proveedores[i.key]=INV_PROVS_DEFAULT[i.key];});
+    }
+  }catch(e){}
+}
 function guardarInventario(){try{localStorage.setItem('i_inv',JSON.stringify(inventario));}catch(e){}}
+
+function _fechaHoy(){const h=new Date();return`${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,'0')}-${String(h.getDate()).padStart(2,'0')}`;}
+function _tsDesdeStr(s){return s?new Date(s+'T00:00:00').getTime():Date.now();}
+function _strDesdeTs(ts){if(!ts)return _fechaHoy();const d=new Date(ts);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 
 function toggleInvConfig(){
   const p=document.getElementById('invConfigPanel');
   const vis=p.style.display!=='none';
   p.style.display=vis?'none':'block';
   if(!vis){
-    document.getElementById('invInitCarne').value=inventario.stockInicial.carne||'';
-    document.getElementById('invInitPollo').value=inventario.stockInicial.pollo||'';
-    document.getElementById('invInitBollos').value=inventario.stockInicial.bollos||'';
-    document.getElementById('invMinCarne').value=inventario.minimos.carne;
-    document.getElementById('invMinPollo').value=inventario.minimos.pollo;
-    document.getElementById('invMinBollos').value=inventario.minimos.bollos;
+    const fi=document.getElementById('invFechaInicio');if(fi)fi.value=_strDesdeTs(inventario.diaInicio);
+    INV_INGS.forEach(i=>{
+      const el=document.getElementById('invInit_'+i.key);if(el)el.value=inventario.stockInicial[i.key]||'';
+      const em=document.getElementById('invMin_'+i.key);if(em)em.value=inventario.minimos[i.key]||'';
+      const ep=document.getElementById('invProv_'+i.key);if(ep)ep.value=inventario.proveedores[i.key]||'';
+    });
   }
 }
 function guardarInvConfig(){
-  const c=parseFloat(document.getElementById('invInitCarne').value)||0;
-  const p=parseFloat(document.getElementById('invInitPollo').value)||0;
-  const b=parseInt(document.getElementById('invInitBollos').value)||0;
-  const mc=parseFloat(document.getElementById('invMinCarne').value)||0.500;
-  const mp=parseFloat(document.getElementById('invMinPollo').value)||0.240;
-  const mb=parseInt(document.getElementById('invMinBollos').value)||8;
-  if(!inventario.diaInicio)inventario.diaInicio=Date.now();
-  inventario.stockInicial={carne:c,pollo:p,bollos:b};
-  inventario.minimos={carne:mc,pollo:mp,bollos:mb};
+  const si={},mi={},pr={};
+  INV_INGS.forEach(i=>{
+    const eInit=document.getElementById('invInit_'+i.key);
+    const eMin=document.getElementById('invMin_'+i.key);
+    const eProv=document.getElementById('invProv_'+i.key);
+    si[i.key]=i.unidad==='pzas'?parseInt(eInit&&eInit.value)||0:parseFloat(eInit&&eInit.value)||0;
+    mi[i.key]=i.unidad==='pzas'?parseInt(eMin&&eMin.value)||i.defMin:parseFloat(eMin&&eMin.value)||i.defMin;
+    pr[i.key]=(eProv&&eProv.value.trim())||'';
+  });
+  const fi=document.getElementById('invFechaInicio');
+  inventario.diaInicio=_tsDesdeStr(fi&&fi.value?fi.value:null);
+  inventario.stockInicial=si;inventario.minimos=mi;inventario.proveedores=pr;
   guardarInventario();
   document.getElementById('invConfigPanel').style.display='none';
   renderInventario();
-  toast('Inventario configurado — Día 1 activo ✓');
+  toast('Inventario configurado — Día 1: '+_strDesdeTs(inventario.diaInicio)+' ✓');
 }
 
 function _usoAcumulado(){
-  if(!inventario.diaInicio)return{carne:0,pollo:0,bollos:0};
+  const base={};INV_INGS.forEach(i=>base[i.key]=0);
+  if(!inventario.diaInicio)return base;
   const vs=ventas.filter(v=>!v.excluida&&v.id>=inventario.diaInicio);
-  let cg=0,pg=0,b=0;
+  let cg=0,pg=0,b=0,papag=0,qa=0,qs=0;
   vs.forEach(v=>v.items.filter(it=>!it.cancelado).forEach(it=>{
     const cfg=MP[it.n];if(!cfg)return;
-    cg+=cfg.carne*it.q*80;pg+=cfg.pollo*it.q*120;b+=cfg.bollo*it.q;
+    cg+=(cfg.carne||0)*it.q*80;
+    pg+=(cfg.pollo||0)*it.q*120;
+    b+=(cfg.bollo||0)*it.q;
+    papag+=(cfg.papa||0)*it.q;
+    qa+=(cfg.qamerica||0)*it.q;
+    qs+=(cfg.qsuizo||0)*it.q;
   }));
-  return{carne:cg/1000,pollo:pg/1000,bollos:b};
+  return{...base,carne:cg/1000,pollo:pg/1000,bollos:b,papa:papag/1000,qamerica:qa,qsuizo:qs};
 }
 function _totalComprado(){
-  const t={carne:0,pollo:0,bollos:0};
+  const t={};INV_INGS.forEach(i=>t[i.key]=0);
   inventario.compras.forEach(c=>c.items.forEach(it=>{if(t[it.tipo]!==undefined)t[it.tipo]+=Number(it.cant);}));
   return t;
 }
 function _stockActual(){
   const uso=_usoAcumulado(),comp=_totalComprado();
-  return{
-    carne:inventario.stockInicial.carne+comp.carne-uso.carne,
-    pollo:inventario.stockInicial.pollo+comp.pollo-uso.pollo,
-    bollos:inventario.stockInicial.bollos+comp.bollos-uso.bollos,
-    uso,comp
-  };
+  const s={uso,comp};
+  INV_INGS.forEach(i=>s[i.key]=(inventario.stockInicial[i.key]||0)+(comp[i.key]||0)-(uso[i.key]||0));
+  return s;
 }
 
 function switchInvTab(tab){
@@ -1703,99 +1770,90 @@ function switchInvTab(tab){
 }
 
 function renderInvFormCompra(){
+  const h=new Date(),hFmt=`${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,'0')}-${String(h.getDate()).padStart(2,'0')}`;
+  const grupoA=INV_INGS.filter(i=>i.auto),grupoM=INV_INGS.filter(i=>!i.auto);
+  const campo=i=>`<div><div style="font-size:11px;color:#555;margin-bottom:4px;">${i.label} (${i.unidad})</div>
+    <input type="number" id="invComp_${i.key}" step="${i.step}" min="0" placeholder="${i.unidad==='kg'?'0.000':'0'}" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>`;
   document.getElementById('invTabCompra').innerHTML=`
-    <div style="max-width:500px;">
+    <div style="max-width:560px;">
       <div style="font-size:13px;font-weight:600;margin-bottom:12px;">Registrar entrada de mercancía</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
         <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Fecha</div>
-          <input type="date" id="invCompFecha" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Proveedor (opcional)</div>
-          <input type="text" id="invCompProv" placeholder="Por asignar" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+          <input type="date" id="invCompFecha" value="${hFmt}" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Proveedor</div>
+          <input type="text" id="invCompProv" placeholder="Nombre del proveedor" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
       </div>
-      <div style="background:#f9f9f9;border:1px solid #e8e8e8;border-radius:10px;padding:14px;margin-bottom:12px;">
-        <div style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:10px;">Cantidades recibidas</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
-          <div><div style="font-size:11px;color:#555;margin-bottom:4px;">Carne de res (kg)</div>
-            <input type="number" id="invCompCarne" step="0.001" min="0" placeholder="0.000" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
-          <div><div style="font-size:11px;color:#555;margin-bottom:4px;">Pollo (kg)</div>
-            <input type="number" id="invCompPollo" step="0.001" min="0" placeholder="0.000" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
-          <div><div style="font-size:11px;color:#555;margin-bottom:4px;">Bollos (pzas)</div>
-            <input type="number" id="invCompBollos" step="1" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
-        </div>
+      <div style="background:#f0f4ff;border:1px solid #c8d8f0;border-radius:10px;padding:14px;margin-bottom:10px;">
+        <div style="font-size:11px;color:#0D2A5E;font-weight:600;text-transform:uppercase;margin-bottom:10px;">Auto-calculados desde ventas</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">${grupoA.map(campo).join('')}</div>
+      </div>
+      <div style="background:#f9f9f9;border:1px solid #e8e8e8;border-radius:10px;padding:14px;margin-bottom:10px;">
+        <div style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:10px;">Control manual</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">${grupoM.map(campo).join('')}</div>
       </div>
       <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Nota (opcional)</div>
         <input type="text" id="invCompNota" placeholder="Ej. Compra semanal lunes" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;margin-bottom:12px;" /></div>
       <button class="btn btn-dark btn-sm" onclick="confirmarCompra()" style="background:#2d7a2d;border-color:#2d7a2d;width:auto;padding:10px 24px;">✓ Registrar entrada</button>
     </div>`;
-  const h=new Date(),fmt=`${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,'0')}-${String(h.getDate()).padStart(2,'0')}`;
-  document.getElementById('invCompFecha').value=fmt;
 }
 function confirmarCompra(){
-  const carne=parseFloat(document.getElementById('invCompCarne').value)||0;
-  const pollo=parseFloat(document.getElementById('invCompPollo').value)||0;
-  const bollos=parseInt(document.getElementById('invCompBollos').value)||0;
-  if(!carne&&!pollo&&!bollos){toast('⚠ Ingresa al menos una cantidad');return;}
   const items=[];
-  if(carne)items.push({tipo:'carne',cant:carne,unidad:'kg'});
-  if(pollo)items.push({tipo:'pollo',cant:pollo,unidad:'kg'});
-  if(bollos)items.push({tipo:'bollos',cant:bollos,unidad:'pza'});
+  INV_INGS.forEach(i=>{
+    const el=document.getElementById('invComp_'+i.key);
+    if(!el)return;
+    const v=i.unidad==='pzas'?parseInt(el.value)||0:parseFloat(el.value)||0;
+    if(v>0)items.push({tipo:i.key,cant:v,unidad:i.unidad});
+  });
+  if(!items.length){toast('⚠ Ingresa al menos una cantidad');return;}
   inventario.compras.push({
     id:Date.now(),
     fecha:document.getElementById('invCompFecha').value,
-    proveedor:document.getElementById('invCompProv').value||'Sin asignar',
+    proveedor:document.getElementById('invCompProv').value.trim()||'Sin asignar',
     nota:document.getElementById('invCompNota').value,
     items
   });
-  guardarInventario();
-  renderInventario();
-  switchInvTab('estado');
-  toast('Entrada registrada ✓');
+  guardarInventario();renderInventario();switchInvTab('estado');toast('Entrada registrada ✓');
 }
 function eliminarCompra(id){
   if(!confirm('¿Eliminar esta entrada del historial?'))return;
   inventario.compras=inventario.compras.filter(c=>c.id!==id);
-  guardarInventario();
-  renderInventario();
-  renderInvHistorial();
-  toast('Entrada eliminada');
+  guardarInventario();renderInventario();renderInvHistorial();toast('Entrada eliminada');
 }
 
 function renderInvHistorial(){
   const c=inventario.compras;
   document.getElementById('invTabHistorial').innerHTML=c.length?`
-    <table class="report-table" style="margin-bottom:0;">
-      <thead><tr><th>Fecha</th><th>Proveedor</th><th>Carne</th><th>Pollo</th><th>Bollos</th><th>Nota</th><th></th></tr></thead>
-      <tbody>${[...c].reverse().map(r=>{
-        const car=r.items.find(i=>i.tipo==='carne'),pol=r.items.find(i=>i.tipo==='pollo'),bol=r.items.find(i=>i.tipo==='bollos');
-        return`<tr>
-          <td>${r.fecha||'—'}</td><td style="font-size:12px;">${r.proveedor||'—'}</td>
-          <td>${car?'+'+Number(car.cant).toFixed(3)+' kg':'—'}</td>
-          <td>${pol?'+'+Number(pol.cant).toFixed(3)+' kg':'—'}</td>
-          <td>${bol?'+'+bol.cant+' pzas':'—'}</td>
+    <div style="overflow-x:auto;">
+    <table class="report-table" style="margin-bottom:0;min-width:700px;">
+      <thead><tr><th>Fecha</th><th>Proveedor</th>${INV_INGS.map(i=>`<th style="text-align:center;white-space:nowrap;">${i.label}</th>`).join('')}<th>Nota</th><th></th></tr></thead>
+      <tbody>${[...c].reverse().map(r=>`<tr>
+          <td style="white-space:nowrap;">${r.fecha||'—'}</td>
+          <td style="font-size:12px;white-space:nowrap;">${r.proveedor||'—'}</td>
+          ${INV_INGS.map(i=>{const it=r.items.find(x=>x.tipo===i.key);return`<td style="text-align:center;">${it?`<span style="color:#2d7a2d;font-weight:600;">+${i.unidad==='kg'?Number(it.cant).toFixed(3)+' kg':it.cant+' pzas'}</span>`:'—'}</td>`;}).join('')}
           <td style="font-size:12px;color:#888;">${r.nota||''}</td>
           <td><button onclick="eliminarCompra(${r.id})" style="background:none;border:none;color:#e24b4a;cursor:pointer;font-size:13px;">✕</button></td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table>`
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`
     :'<div class="empty" style="padding:20px 0;">Sin compras registradas</div>';
 }
 
 function renderInvOrden(){
-  const s=_stockActual(),m=inventario.minimos;
+  const s=_stockActual(),m=inventario.minimos,pr=inventario.proveedores||{};
   if(!inventario.diaInicio){document.getElementById('invTabOrden').innerHTML='<div class="empty" style="padding:20px 0;">Configura el inventario inicial primero</div>';return;}
-  // Recomendar suficiente para 3× el mínimo
-  const recCarne=Math.max(0,m.carne*3-s.carne);
-  const recPollo=Math.max(0,m.pollo*3-s.pollo);
-  const recBollos=Math.max(0,m.bollos*3-s.bollos);
-  const hayAlgo=recCarne>0||recPollo>0||recBollos>0;
-
-  // Agrupar por proveedor
-  const provs=inventario.proveedores||{};
   const grupos={};
-  if(recCarne>0){const p=provs.carne||'Sin proveedor asignado';if(!grupos[p])grupos[p]=[];grupos[p].push({ing:'Carne de res',cant:recCarne.toFixed(3)+' kg',nota:'Stock: '+s.carne.toFixed(3)+' kg · Mín: '+m.carne.toFixed(3)+' kg'});}
-  if(recPollo>0){const p=provs.pollo||'Sin proveedor asignado';if(!grupos[p])grupos[p]=[];grupos[p].push({ing:'Pollo',cant:recPollo.toFixed(3)+' kg',nota:'Stock: '+s.pollo.toFixed(3)+' kg · Mín: '+m.pollo.toFixed(3)+' kg'});}
-  if(recBollos>0){const p=provs.bollos||'Sin proveedor asignado';if(!grupos[p])grupos[p]=[];grupos[p].push({ing:'Bollos de pan',cant:Math.ceil(recBollos)+' pzas',nota:'Stock: '+s.bollos+' pzas · Mín: '+m.bollos+' pzas'});}
-
+  INV_INGS.forEach(i=>{
+    const rec=m[i.key]*3-s[i.key];
+    if(rec<=0)return;
+    const prov=pr[i.key]||'Sin proveedor asignado';
+    if(!grupos[prov])grupos[prov]=[];
+    grupos[prov].push({
+      ing:i.label,
+      cant:i.unidad==='kg'?rec.toFixed(3)+' kg':Math.ceil(rec)+' pzas',
+      nota:'Stock: '+i.fmt(s[i.key]||0)+' · Mín: '+i.fmt(m[i.key]||i.defMin)
+    });
+  });
+  const hayAlgo=Object.keys(grupos).length>0;
   const hoy=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
   document.getElementById('invTabOrden').innerHTML=hayAlgo?
     Object.entries(grupos).map(([prov,items])=>`
@@ -1809,8 +1867,7 @@ function renderInvOrden(){
           <tbody>${items.map(i=>`<tr><td style="padding:10px 14px;font-weight:500;">${i.ing}</td><td style="padding:10px 14px;text-align:center;font-weight:700;color:#0D2A5E;">${i.cant}</td><td style="padding:10px 14px;font-size:12px;color:#888;">${i.nota}</td></tr>`).join('')}</tbody>
         </table>
         <div style="padding:10px 14px;font-size:11px;color:#aaa;border-top:1px solid #f0f0f0;">Cantidad sugerida = suficiente para 3× el stock mínimo</div>
-      </div>`).join('')+
-    `<div style="font-size:12px;color:#aaa;margin-top:4px;">Los proveedores se asignarán cuando los ingreses al sistema.</div>`
+      </div>`).join('')
     :`<div class="inv-ok"><span style="font-size:22px;">✅</span><div><div style="font-weight:600;">Inventario suficiente</div><div style="font-size:12px;color:#555;margin-top:2px;">Todo está por encima del mínimo. No se requiere compra.</div></div></div>`;
 }
 
@@ -1818,82 +1875,55 @@ function renderInventario(){
   if(!adminAutenticado)return;
   const s=_stockActual(),m=inventario.minimos;
   const sinConfig=!inventario.diaInicio;
-
-  const estado=(val,min,fmt)=>{
-    if(sinConfig)return'sin-config';
-    if(val<=min)return'alerta';
-    if(val<=min*1.5)return'aviso';
-    return'ok';
-  };
-  const estCarne=estado(s.carne,m.carne),estPollo=estado(s.pollo,m.pollo),estBollos=estado(s.bollos,m.bollos);
-  const hayAlerta=estCarne==='alerta'||estPollo==='alerta'||estBollos==='alerta';
-  const hayAviso=estCarne==='aviso'||estPollo==='aviso'||estBollos==='aviso';
+  const estIng=i=>{if(sinConfig)return'sin-config';if((s[i.key]||0)<=m[i.key])return'alerta';if((s[i.key]||0)<=m[i.key]*1.5)return'aviso';return'ok';};
+  const estados=INV_INGS.map(i=>({i,est:estIng(i)}));
+  const hayAlerta=estados.some(e=>e.est==='alerta');
   document.getElementById('invAlertaBadge').style.display=hayAlerta?'inline':'none';
-
   const claseCard={alerta:'inv-alert',aviso:'inv-warn',ok:'inv-ok','sin-config':'inv-ok'};
   const iconoCard={alerta:'🔴',aviso:'🟡',ok:'🟢','sin-config':'⚪'};
 
-  const cardIng=(label,val,min,est,fmt,unidad)=>`
+  const autoLabel='<span style="font-size:9px;background:#e8f0ff;color:#0D2A5E;border-radius:4px;padding:1px 5px;margin-left:5px;">AUTO</span>';
+  const manualLabel='<span style="font-size:9px;background:#f0f0f0;color:#888;border-radius:4px;padding:1px 5px;margin-left:5px;">MANUAL</span>';
+
+  const cards=estados.map(({i,est})=>`
     <div class="${claseCard[est]}">
-      <div style="font-size:22px;">${iconoCard[est]}</div>
+      <div style="font-size:20px;">${iconoCard[est]}</div>
       <div style="flex:1;">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;">
-          <span style="font-weight:700;font-size:15px;">${label}</span>
-          <span class="inv-stock-val" style="color:${est==='alerta'?'#e24b4a':est==='aviso'?'#b06800':'#2d7a2d'};">${sinConfig?'—':fmt(val)}</span>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px;">
+          <span style="font-weight:700;font-size:14px;">${i.label}${i.auto?autoLabel:manualLabel}</span>
+          <span style="font-size:18px;font-weight:700;color:${est==='alerta'?'#e24b4a':est==='aviso'?'#b06800':'#2d7a2d'};">${sinConfig?'—':i.fmt(s[i.key]||0)}</span>
         </div>
-        <div class="inv-stock-label">
-          ${sinConfig?'Configura el inventario inicial':
-            `Stock actual · Mínimo: ${fmt(min)} · Usado hoy*: ${fmt(est==='sin-config'?0:0)}`}
+        <div style="font-size:11px;color:#aaa;margin-top:2px;">
+          ${sinConfig?'Configura el inventario inicial':`Mínimo: ${i.fmt(m[i.key]||i.defMin)} · Proveedor: ${(inventario.proveedores||{})[i.key]||'—'}`}
         </div>
         ${est==='alerta'?`<div style="font-size:11px;color:#e24b4a;font-weight:600;margin-top:3px;">⚠ Debajo del mínimo — compra urgente</div>`:''}
-        ${est==='aviso'?`<div style="font-size:11px;color:#b06800;font-weight:600;margin-top:3px;">Cerca del mínimo — considera comprar</div>`:''}
+        ${est==='aviso'?`<div style="font-size:11px;color:#b06800;font-weight:500;margin-top:3px;">Cerca del mínimo</div>`:''}
       </div>
-    </div>`;
+    </div>`).join('');
 
-  const fKg=v=>v.toFixed(3)+' kg';
-  const fPz=v=>v+' pzas';
-
-  document.getElementById('invTabEstado').innerHTML=`
-    ${cardIng('Carne de res',s.carne,m.carne,estCarne,fKg,'kg')}
-    ${cardIng('Pollo',s.pollo,m.pollo,estPollo,fKg,'kg')}
-    ${cardIng('Bollos de pan',s.bollos,m.bollos,estBollos,fPz,'pzas')}
-    ${sinConfig?'':`
+  document.getElementById('invTabEstado').innerHTML=cards+(sinConfig?'':`
     <div style="margin-top:16px;overflow-x:auto;">
-      <table class="report-table" style="margin-bottom:6px;min-width:560px;">
+      <table class="report-table" style="margin-bottom:6px;min-width:640px;">
         <thead><tr>
           <th>Ingrediente</th><th style="text-align:right;">Stock inicial</th>
           <th style="text-align:right;">+ Comprado</th><th style="text-align:right;">− Uso acum.</th>
           <th style="text-align:right;">Stock actual</th><th style="text-align:right;">Mínimo</th>
         </tr></thead>
-        <tbody>
-          <tr>
-            <td style="font-weight:500;">Carne de res</td>
-            <td style="text-align:right;">${inventario.stockInicial.carne.toFixed(3)} kg</td>
-            <td style="text-align:right;color:#2d7a2d;">+${s.comp.carne.toFixed(3)} kg</td>
-            <td style="text-align:right;color:#e24b4a;">−${s.uso.carne.toFixed(3)} kg</td>
-            <td style="text-align:right;font-weight:700;color:${estCarne==='alerta'?'#e24b4a':estCarne==='aviso'?'#b06800':'#0D2A5E'};">${s.carne.toFixed(3)} kg</td>
-            <td style="text-align:right;color:#888;">${m.carne.toFixed(3)} kg</td>
-          </tr>
-          <tr>
-            <td style="font-weight:500;">Pollo</td>
-            <td style="text-align:right;">${inventario.stockInicial.pollo.toFixed(3)} kg</td>
-            <td style="text-align:right;color:#2d7a2d;">+${s.comp.pollo.toFixed(3)} kg</td>
-            <td style="text-align:right;color:#e24b4a;">−${s.uso.pollo.toFixed(3)} kg</td>
-            <td style="text-align:right;font-weight:700;color:${estPollo==='alerta'?'#e24b4a':estPollo==='aviso'?'#b06800':'#0D2A5E'};">${s.pollo.toFixed(3)} kg</td>
-            <td style="text-align:right;color:#888;">${m.pollo.toFixed(3)} kg</td>
-          </tr>
-          <tr>
-            <td style="font-weight:500;">Bollos de pan</td>
-            <td style="text-align:right;">${inventario.stockInicial.bollos} pzas</td>
-            <td style="text-align:right;color:#2d7a2d;">+${s.comp.bollos} pzas</td>
-            <td style="text-align:right;color:#e24b4a;">−${s.uso.bollos} pzas</td>
-            <td style="text-align:right;font-weight:700;color:${estBollos==='alerta'?'#e24b4a':estBollos==='aviso'?'#b06800':'#0D2A5E'};">${s.bollos} pzas</td>
-            <td style="text-align:right;color:#888;">${m.bollos} pzas</td>
-          </tr>
+        <tbody>${INV_INGS.map(i=>{
+          const est=estIng(i),val=s[i.key]||0,comp=s.comp[i.key]||0,uso=s.uso[i.key]||0,ini=inventario.stockInicial[i.key]||0,min=m[i.key]||i.defMin;
+          const col=est==='alerta'?'#e24b4a':est==='aviso'?'#b06800':'#0D2A5E';
+          return`<tr>
+            <td style="font-weight:500;">${i.label}${i.auto?autoLabel:manualLabel}</td>
+            <td style="text-align:right;">${i.fmt(ini)}</td>
+            <td style="text-align:right;color:#2d7a2d;">+${i.fmt(comp)}</td>
+            <td style="text-align:right;color:${uso>0?'#e24b4a':'#aaa'};">${uso>0?'−'+i.fmt(uso):'—'}</td>
+            <td style="text-align:right;font-weight:700;color:${col};">${i.fmt(val)}</td>
+            <td style="text-align:right;color:#888;">${i.fmt(min)}</td>
+          </tr>`;}).join('')}
         </tbody>
       </table>
-      <div style="font-size:11px;color:#aaa;">*Uso acumulado desde Día 1 (${new Date(inventario.diaInicio).toLocaleDateString('es-MX')}) · No incluye merma</div>
-    </div>`}`;
+      <div style="font-size:11px;color:#aaa;">AUTO = calculado desde ventas desde Día 1 (${new Date(inventario.diaInicio).toLocaleDateString('es-MX')}) · MANUAL = solo compras registradas</div>
+    </div>`);
 }
 
 // ── ADMIN DASHBOARD ──
