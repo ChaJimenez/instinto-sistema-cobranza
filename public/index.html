@@ -434,18 +434,33 @@ function fmtProp(n){
 }
 
 // ── CAPA DE DATOS (API) ──
-async function cargarDatos(){
+async function cargarDatos(esRecarga){
   try {
     const r = await fetch('/api/datos');
     if(!r.ok) throw new Error('HTTP '+r.status);
     const d = await r.json();
-    comandas = d.cmd || [];
+    const serverCmd = d.cmd || [];
+    if(esRecarga){
+      // Merge: el servidor manda, pero se conservan comandas locales que aún no llegaron al servidor
+      const serverIds = new Set(serverCmd.map(c=>c.id));
+      const soloLocales = comandas.filter(c=>!serverIds.has(c.id));
+      if(soloLocales.length){
+        console.warn('🛡 Protegidas',soloLocales.length,'comanda(s) local(es):',soloLocales.map(c=>'Mesa '+c.mesa));
+        // Guardarlas de inmediato para sincronizar
+        const merged=[...serverCmd,...soloLocales];
+        comandas=merged;
+        await fetch('/api/guardar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cmd:merged,vta:ventas,mes:meseros,canc:cancelaciones})});
+      } else {
+        comandas = serverCmd;
+      }
+    } else {
+      comandas = serverCmd;
+    }
     ventas = d.vta || [];
     meseros = d.mes || [];
     cancelaciones = d.canc || [];
     setSyncDot(true);
   } catch(e) {
-    // Fallback localStorage si la API no responde
     try{comandas=JSON.parse(localStorage.getItem('i_cmd')||'[]');}catch(e2){}
     try{ventas=JSON.parse(localStorage.getItem('i_vta')||'[]');}catch(e2){}
     try{meseros=JSON.parse(localStorage.getItem('i_mes')||'[]');}catch(e2){}
@@ -488,7 +503,7 @@ setInterval(async()=>{
     const{ts}=await r.json();
     if(ts>ultimaActualizacion&&ultimaActualizacion>0){
       ultimaActualizacion=ts;
-      await cargarDatos();
+      await cargarDatos(true);
       renderAbiertas();
       renderMeseroSelect();
       document.getElementById('badgeN').textContent=comandas.filter(c=>c.estado==='abierta').length?`(${comandas.filter(c=>c.estado==='abierta').length})`:'';
