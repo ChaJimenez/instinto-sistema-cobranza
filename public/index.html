@@ -383,6 +383,11 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
     <div class="admin-card-title">Modificaciones de encargado</div>
     <div id="adminEdits"></div>
   </div>
+
+  <div class="admin-card" style="border-top:3px solid #F5A020;">
+    <div class="admin-card-title">🧪 Control de materia prima <span style="font-weight:400;color:#bbb;font-size:10px;margin-left:6px;">EXPERIMENTAL</span></div>
+    <div id="adminMP"></div>
+  </div>
 </div>
 
 <!-- MODAL: editar venta cerrada -->
@@ -521,6 +526,18 @@ const MENU = {
   "Preparados":[{n:"Michelada / Cubana",p:40},{n:"Clamato Preparado",p:80}]
 };
 const EXTRAS=[{n:"Crispy onions",p:35},{n:"Extra carne",p:55},{n:"Puré de papa",p:35},{n:"Aguacate",p:55},{n:"Tocino extra",p:35},{n:"Chicharrón carnoso",p:50}];
+
+// ── MATERIA PRIMA — Config de insumos por producto ──
+// carne: bolitas de 80g de res · bollo: piezas de pan · pollo: piezas de pollo
+const MP={
+  'Cheeseburger Clásica':      {carne:1, bollo:1, pollo:0},
+  'Doble Doble':               {carne:2, bollo:1, pollo:0},  // doble patty = 2×80g
+  'Hamburguesa con Tocino':    {carne:1, bollo:1, pollo:0},
+  'Crispy Chicken Hot Honey':  {carne:0, bollo:1, pollo:1},
+  'Vegetariana':               {carne:0, bollo:1, pollo:0},
+  'Burger + Papas + Refresco': {carne:1, bollo:1, pollo:0},
+  'Extra carne':               {carne:1, bollo:0, pollo:0},  // extra de menú
+};
 
 // ── ESTADO EN MEMORIA ──
 let currentItems=[], currentPago="Efectivo", editandoId=null, currentPropina=0, currentMixtoEf=0, currentMixtoTj=0;
@@ -1814,6 +1831,74 @@ function renderAdmin(){
       }).join('')}
     </div>`;
   } else {secAb.style.display='none';}
+
+  // ── MATERIA PRIMA ──
+  let mpCarne=0,mpBollos=0,mpPollo=0;
+  const mpDet={};  // {nombre:{q,carne,bollo,pollo}}
+  vFilt.forEach(v=>{
+    v.items.filter(it=>!it.cancelado).forEach(it=>{
+      const cfg=MP[it.n];if(!cfg)return;
+      const q=it.q;
+      mpCarne+=cfg.carne*q;mpBollos+=cfg.bollo*q;mpPollo+=cfg.pollo*q;
+      if(!mpDet[it.n])mpDet[it.n]={q:0,carne:0,bollo:0,pollo:0};
+      mpDet[it.n].q+=q;mpDet[it.n].carne+=cfg.carne*q;
+      mpDet[it.n].bollo+=cfg.bollo*q;mpDet[it.n].pollo+=cfg.pollo*q;
+    });
+  });
+  const mpCarneG=mpCarne*80;
+  const mpRows=Object.entries(mpDet).sort((a,b)=>b[1].carne-a[1].carne);
+  document.getElementById('adminMP').innerHTML=mpRows.length?`
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
+      <div style="background:#0D2A5E;color:#fff;border-radius:12px;padding:16px;text-align:center;">
+        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.6);margin-bottom:8px;">Carne de res</div>
+        <div style="font-size:26px;font-weight:700;">${mpCarneG.toLocaleString()}g</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.6);margin-top:4px;">${(mpCarneG/1000).toFixed(2)} kg · ${mpCarne} bolita${mpCarne!==1?'s':''}</div>
+      </div>
+      <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:16px;text-align:center;">
+        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:8px;">Bollos de pan</div>
+        <div style="font-size:26px;font-weight:700;color:#0D2A5E;">${mpBollos}</div>
+        <div style="font-size:13px;color:#aaa;margin-top:4px;">pieza${mpBollos!==1?'s':''} de pan</div>
+      </div>
+      ${mpPollo>0?`<div style="background:#fff8ed;border:1px solid #e8a020;border-radius:12px;padding:16px;text-align:center;">
+        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#b06800;margin-bottom:8px;">Piezas de pollo</div>
+        <div style="font-size:26px;font-weight:700;color:#b06800;">${mpPollo}</div>
+        <div style="font-size:13px;color:#b06800;opacity:0.7;margin-top:4px;">pieza${mpPollo!==1?'s':''} de pollo</div>
+      </div>`:`<div style="background:#f5f5f3;border:1px solid #e8e8e8;border-radius:12px;padding:16px;text-align:center;opacity:0.5;">
+        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#aaa;margin-bottom:8px;">Piezas de pollo</div>
+        <div style="font-size:26px;font-weight:700;color:#ccc;">0</div>
+        <div style="font-size:13px;color:#ccc;margin-top:4px;">sin crispy chicken</div>
+      </div>`}
+    </div>
+    <table class="report-table" style="margin-bottom:8px;">
+      <thead><tr>
+        <th>Producto</th>
+        <th style="text-align:center;">Vendidos</th>
+        <th style="text-align:center;">Bolitas carne</th>
+        <th style="text-align:center;">Gramos res</th>
+        <th style="text-align:center;">Bollos</th>
+        <th style="text-align:center;">Pollo</th>
+      </tr></thead>
+      <tbody>
+        ${mpRows.map(([n,d])=>`<tr>
+          <td style="font-weight:500;">${n}</td>
+          <td style="text-align:center;">${d.q}</td>
+          <td style="text-align:center;">${d.carne>0?d.carne:'—'}</td>
+          <td style="text-align:center;font-weight:600;color:#0D2A5E;">${d.carne>0?(d.carne*80)+'g':'—'}</td>
+          <td style="text-align:center;">${d.bollo>0?d.bollo:'—'}</td>
+          <td style="text-align:center;color:#b06800;">${d.pollo>0?d.pollo:'—'}</td>
+        </tr>`).join('')}
+        <tr style="background:#f5f5f3;font-weight:700;border-top:2px solid #e0e0e0;">
+          <td>TOTAL</td>
+          <td style="text-align:center;">${mpRows.reduce((s,[,d])=>s+d.q,0)}</td>
+          <td style="text-align:center;">${mpCarne}</td>
+          <td style="text-align:center;color:#0D2A5E;">${mpCarneG}g</td>
+          <td style="text-align:center;">${mpBollos}</td>
+          <td style="text-align:center;color:#b06800;">${mpPollo||'—'}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="font-size:11px;color:#aaa;padding-top:6px;">Incluye cortesías. Excluye ítems cancelados. 1 bolita = 80g · Doble Doble = 2 bolitas.</div>
+  `:'<div style="font-size:13px;color:#aaa;padding:16px 0;text-align:center;">Sin hamburguesas vendidas en el período</div>';
 
   // ── EDICIONES DE ENCARGADO ──
   const edits=[];vFilt.forEach(v=>{(v.editLog||[]).forEach(e=>edits.push({...e,mesa:v.mesa,mesero:v.mesero}));});
