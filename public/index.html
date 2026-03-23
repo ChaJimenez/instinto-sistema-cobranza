@@ -1118,10 +1118,19 @@ function renderReporte(){
   const propTotal=vFilt.reduce((s,v)=>s+(v.propina||0),0);
   const descTotal=vFilt.reduce((s,v)=>s+((v.descuento&&v.descuento.valor)||0),0);
   const cancTotal=cFilt.reduce((s,c)=>s+c.valor,0);
+  // Mesas abiertas del mismo día/mesero
+  const mAbiertas=comandas.filter(c=>c.estado==='abierta'&&matchFecha(c)&&(!meseroFiltro||c.mesero===meseroFiltro));
+  const abiertasTotal=mAbiertas.reduce((s,c)=>s+(c.total||0),0);
+  const granTotal=total+abiertasTotal;
   const ticket=vFilt.length?Math.round(total/vFilt.length):0;
+  const notaAbiertas=mAbiertas.length>0
+    ?`<div style="font-size:11px;color:#185fa5;margin-top:3px;">incl. ${mAbiertas.length} mesa${mAbiertas.length>1?'s':''} abierta${mAbiertas.length>1?'s':''}: $${abiertasTotal.toLocaleString()} pendiente</div>`
+    :'';
   document.getElementById('statsGrid').innerHTML=`
-    <div class="stat"><label>Venta total</label><div class="val">$${total.toLocaleString()}</div></div>
-    <div class="stat"><label>Comandas</label><div class="val">${vFilt.length}</div></div>
+    <div class="stat"><label>Venta total</label><div class="val">$${granTotal.toLocaleString()}</div>${notaAbiertas}</div>
+    <div class="stat"><label>Cobrado</label><div class="val" style="font-size:18px;">$${total.toLocaleString()}</div></div>
+    ${mAbiertas.length>0?`<div class="stat"><label>Mesas abiertas</label><div class="val" style="color:#185fa5;">$${abiertasTotal.toLocaleString()}</div><div style="font-size:11px;color:#185fa5;">${mAbiertas.map(c=>'Mesa '+c.mesa).join(' · ')}</div></div>`:''}
+    <div class="stat"><label>Comandas cerradas</label><div class="val">${vFilt.length}</div></div>
     <div class="stat"><label>Ticket promedio</label><div class="val">$${ticket.toLocaleString()}</div></div>
     <div class="stat"><label>Propinas</label><div class="val green">$${propTotal.toLocaleString()}</div></div>
     ${descTotal>0?`<div class="stat"><label>Descuentos</label><div class="val amber">$${descTotal.toLocaleString()}</div></div>`:''}
