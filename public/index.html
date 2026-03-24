@@ -638,12 +638,18 @@ async function cargarDatos(esRecarga){
     const d = await r.json();
     const serverCmd = d.cmd || [];
     if(esRecarga){
-      // Merge: el servidor manda, pero se conservan comandas locales que aún no llegaron al servidor
+      // Merge: el servidor manda, pero se conservan comandas locales que aún no llegaron al servidor.
+      // IMPORTANTE: excluir comandas que ya están en ventas del servidor (fueron pagadas en otro dispositivo).
       const serverIds = new Set(serverCmd.map(c=>c.id));
-      const soloLocales = comandas.filter(c=>!serverIds.has(c.id));
+      const serverVentaIds = new Set((d.vta||[]).map(v=>v.id));
+      const soloLocales = comandas.filter(c=>!serverIds.has(c.id) && !serverVentaIds.has(c.id));
       if(soloLocales.length){
         console.warn('🛡 Protegidas',soloLocales.length,'comanda(s) local(es):',soloLocales.map(c=>'Mesa '+c.mesa));
-        // Guardarlas de inmediato para sincronizar
+        // Usar datos del servidor para ventas/meseros/canc antes de re-guardar,
+        // evitando sobreescribir ventas recientes con estado local stale.
+        ventas = d.vta || [];
+        meseros = d.mes || [];
+        cancelaciones = d.canc || [];
         const merged=[...serverCmd,...soloLocales];
         comandas=merged;
         await fetch('/api/guardar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cmd:merged,vta:ventas,mes:meseros,canc:cancelaciones})});
@@ -674,6 +680,8 @@ async function guardar(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({cmd:comandas,vta:ventas,mes:meseros,canc:cancelaciones})
     });
+    // Actualizar marca de tiempo local para que el poll no recargue el estado que acabamos de guardar
+    ultimaActualizacion = Date.now();
     setSyncDot(true);
   } catch(e) {
     // Fallback localStorage
@@ -1212,8 +1220,12 @@ function confirmarCobro(){
   const {bruto,desc,cobrable}=calcDescModal(c);
   const descObj=desc>0?{tipo:modalDescuento.tipo,pct:modalDescuento.pct,valor:desc}:null;
   const venta={...c,total:cobrable,subtotal:bruto,descuento:descObj,pago:pagoStrModal,propina:modalPropina,estado:'cerrada',...(modalPago==='Mixto'?{mixtoEf:modalMixtoEf,mixtoTj:modalMixtoTj}:{})};
-  ventas.push(venta);comandas.splice(idx,1);
-  guardar();enviarRecibo(venta);
+  // Protección anti-duplicado: si ya existe una venta con este mismo id de comanda, no insertar otra
+  const yaExiste=ventas.some(v=>v.id===venta.id);
+  if(!yaExiste) ventas.push(venta);
+  else console.warn('⚠ Venta duplicada bloqueada para mesa',c.mesa,'id',venta.id);
+  comandas.splice(idx,1);
+  guardar();if(!yaExiste)enviarRecibo(venta);
   cerrarModal('modalCobrar');renderAbiertas();toast('Cobrado ✓');
 }
 function cerrarModal(id){document.getElementById(id).classList.remove('open');}
@@ -2169,6 +2181,7 @@ function renderAdmin(){
           <div style="font-size:12px;color:#555;">${c.mesero}</div>
           <div style="font-size:18px;font-weight:600;margin:6px 0;">$${(c.total||0).toLocaleString()}</div>
           <div style="font-size:11px;color:#888;">Abierta ${tiempo} · desde ${c.hora}</div>
+          <button onclick="eliminarComandaFantasma('${c.id}')" style="margin-top:8px;width:100%;padding:6px;background:none;border:1px solid #e24b4a;border-radius:6px;color:#e24b4a;font-size:12px;cursor:pointer;">✕ Eliminar (ya cobrada)</button>
         </div>`;
       }).join('')}
     </div>`;
@@ -2341,6 +2354,16 @@ function agregarMesero(){
   const inp=document.getElementById('nuevoMesero');const n=inp.value.trim();
   if(!n){toast('Escribe un nombre');return;}if(meseros.includes(n)){toast('Ya existe');return;}
   meseros.push(n);guardar();inp.value='';renderMeseroConfig();renderMeseroSelect();toast(n+' agregado ✓');
+}
+function eliminarComandaFantasma(id){
+  const c=comandas.find(x=>String(x.id)===String(id));
+  if(!c){toast('Comanda no encontrada');return;}
+  pedirPin('Eliminar comanda fantasma',`Mesa ${c.mesa} · $${(c.total||0).toLocaleString()} · ${c.hora}\n\nUsa esto SOLO si ya fue cobrada en físico y queda atascada como abierta. No crea registro de pago.`,()=>{
+    comandas=comandas.filter(x=>String(x.id)!==String(id));
+    guardar();
+    renderAdmin();
+    toast(`Mesa ${c.mesa} eliminada del sistema ✓`);
+  });
 }
 function eliminarMesero(i){
   if(!confirm(`¿Quitar a ${meseros[i]}?`))return;
