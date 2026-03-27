@@ -13,6 +13,14 @@ app.use(express.json({ limit: '10mb' }));
 
 const KEYS = { cmd: 'i:cmd', vta: 'i:vta', mes: 'i:mes', canc: 'i:canc', ts: 'i:lastUpdate' };
 const PIN = process.env.PIN_ADMIN || '1234';
+const API_SECRET = process.env.API_SECRET;
+
+// Middleware de autenticación — solo activo si API_SECRET está configurado en Vercel
+function requireAuth(req, res, next) {
+  if (!API_SECRET) return next();
+  if (req.headers['x-api-key'] !== API_SECRET) return res.status(401).json({ error: 'No autorizado' });
+  next();
+}
 
 // ── Cargar todos los datos ──
 app.get('/api/datos', async (req, res) => {
@@ -31,7 +39,7 @@ app.get('/api/datos', async (req, res) => {
 });
 
 // ── Guardar todos los datos ──
-app.post('/api/guardar', async (req, res) => {
+app.post('/api/guardar', requireAuth, async (req, res) => {
   try {
     const { cmd, vta, mes, canc } = req.body;
     await Promise.all([
@@ -59,7 +67,7 @@ app.get('/api/lastUpdate', async (req, res) => {
 });
 
 // ── Importar backup de localStorage (una sola vez) ──
-app.post('/api/importar', async (req, res) => {
+app.post('/api/importar', requireAuth, async (req, res) => {
   try {
     const { pin, cmd, vta, mes, canc } = req.body;
     if (pin !== PIN) return res.status(401).json({ error: 'PIN incorrecto' });
@@ -80,7 +88,7 @@ app.post('/api/importar', async (req, res) => {
 // ── Impresión en cocina / barra ──
 const BARRA_CATS = ['Refrescos', 'Cervezas', 'Preparados'];
 
-app.post('/api/imprimir', async (req, res) => {
+app.post('/api/imprimir', requireAuth, async (req, res) => {
   try {
     const { mesa, mesero, items = [], hora } = req.body;
     const activos = items.filter(it => !it.cancelado);
@@ -99,7 +107,7 @@ app.post('/api/imprimir', async (req, res) => {
 });
 
 // ── Imprimir recibo de cuenta (preview o ticket final) ──
-app.post('/api/imprimir-recibo', async (req, res) => {
+app.post('/api/imprimir-recibo', requireAuth, async (req, res) => {
   try {
     const job = { id: Date.now() + 'r', destino: 'recibo', ts: Date.now(), ...req.body };
     await kv.rpush('i:printjobs', JSON.stringify(job));
@@ -119,6 +127,25 @@ app.get('/api/print-queue', async (req, res) => {
   } catch (e) {
     res.json({ jobs: [] });
   }
+});
+
+// ── Re-encolar jobs que fallaron al imprimir ──
+app.post('/api/requeue', requireAuth, async (req, res) => {
+  try {
+    const { jobs = [] } = req.body;
+    if (jobs.length) await kv.rpush('i:printjobs', ...jobs.map(j => JSON.stringify(j)));
+    res.json({ ok: true, requeued: jobs.length });
+  } catch (e) {
+    console.error('Error /api/requeue:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Validar PIN (sin exponer el PIN en el cliente) ──
+app.post('/api/validate-pin', async (req, res) => {
+  const { pin } = req.body || {};
+  if (pin === PIN) res.json({ ok: true });
+  else res.status(401).json({ ok: false });
 });
 
 app.get('/health', (req, res) => res.json({ ok: true, ts: new Date().toISOString() }));

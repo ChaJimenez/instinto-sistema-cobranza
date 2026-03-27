@@ -114,6 +114,7 @@ async function poll() {
     const res = await fetch(API_BASE + '/api/print-queue');
     if (!res.ok) return;
     const { jobs } = await res.json();
+    const failed = [];
 
     for (const job of jobs) {
       const printer = PRINTERS[job.destino];
@@ -124,6 +125,21 @@ async function poll() {
         console.log('✅ Impreso (' + job.destino + ')  Mesa ' + job.mesa + '  · ' + job.mesero + '  · ' + job.hora);
       } catch (e) {
         console.error('❌ Error en ' + job.destino + ' (' + printer.host + '):', e.message);
+        failed.push(job);
+      }
+    }
+
+    // Re-encolar los jobs que fallaron para no perderlos
+    if (failed.length) {
+      try {
+        await fetch(API_BASE + '/api/requeue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobs: failed })
+        });
+        console.warn('🔄 Re-encolados ' + failed.length + ' job(s) fallidos — se reintentará');
+      } catch (e) {
+        console.error('❌ No se pudo re-encolar:', e.message);
       }
     }
   } catch (e) {

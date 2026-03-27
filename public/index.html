@@ -581,8 +581,8 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
 
 <script>
 // ── CONFIGURACIÓN ──
-const PIN = '1234';
 const PRINT_SERVER = 'http://127.0.0.1:3000';
+const API_KEY = '';
 
 const MENU = {
   "Hamburguesas":[{n:"Cheeseburger Clásica",p:95},{n:"Doble Doble",p:128},{n:"Hamburguesa con Tocino",p:158},{n:"Crispy Chicken Hot Honey",p:148},{n:"Vegetariana",p:138}],
@@ -638,31 +638,36 @@ async function cargarDatos(esRecarga){
     if(!r.ok) throw new Error('HTTP '+r.status);
     const d = await r.json();
     const serverCmd = d.cmd || [];
+    const serverVta = d.vta || [];
     if(esRecarga){
-      // Merge: el servidor manda, pero se conservan comandas locales que aún no llegaron al servidor.
-      // IMPORTANTE: excluir comandas que ya están en ventas del servidor (fueron pagadas en otro dispositivo).
       const serverIds = new Set(serverCmd.map(c=>c.id));
-      const serverVentaIds = new Set((d.vta||[]).map(v=>v.id));
-      const soloLocales = comandas.filter(c=>!serverIds.has(c.id) && !serverVentaIds.has(c.id));
-      if(soloLocales.length){
-        console.warn('🛡 Protegidas',soloLocales.length,'comanda(s) local(es):',soloLocales.map(c=>'Mesa '+c.mesa));
-        // Usar datos del servidor para ventas/meseros/canc antes de re-guardar,
-        // evitando sobreescribir ventas recientes con estado local stale.
-        ventas = d.vta || [];
-        meseros = d.mes || [];
-        cancelaciones = d.canc || [];
-        const merged=[...serverCmd,...soloLocales];
+      const serverVentaIds = new Set(serverVta.map(v=>v.id));
+      // Ventas locales que aún no llegaron al servidor (save pudo haber fallado)
+      const localVentaIds = new Set(ventas.map(v=>v.id));
+      const allVentaIds = new Set([...serverVentaIds, ...localVentaIds]);
+      const localOnlyVentas = ventas.filter(v=>!serverVentaIds.has(v.id));
+      const mergedVentas = [...serverVta, ...localOnlyVentas];
+      // Filtrar del servidor comandas que ya se cerraron localmente (protege contra save fallido)
+      const cleanServerCmd = serverCmd.filter(c=>!allVentaIds.has(c.id));
+      // Comandas locales que no están en el servidor y no han sido cerradas
+      const soloLocales = comandas.filter(c=>!serverIds.has(c.id) && !allVentaIds.has(c.id));
+      ventas = mergedVentas;
+      meseros = d.mes || [];
+      cancelaciones = d.canc || [];
+      if(soloLocales.length || localOnlyVentas.length){
+        if(soloLocales.length) console.warn('🛡 Protegidas',soloLocales.length,'comanda(s) local(es):',soloLocales.map(c=>'Mesa '+c.mesa));
+        const merged=[...cleanServerCmd,...soloLocales];
         comandas=merged;
-        await fetch('/api/guardar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cmd:merged,vta:ventas,mes:meseros,canc:cancelaciones})});
+        await fetch('/api/guardar',{method:'POST',headers:{'Content-Type':'application/json','X-API-Key':API_KEY},body:JSON.stringify({cmd:merged,vta:ventas,mes:meseros,canc:cancelaciones})});
       } else {
-        comandas = serverCmd;
+        comandas = cleanServerCmd;
       }
     } else {
       comandas = serverCmd;
+      ventas = serverVta;
+      meseros = d.mes || [];
+      cancelaciones = d.canc || [];
     }
-    ventas = d.vta || [];
-    meseros = d.mes || [];
-    cancelaciones = d.canc || [];
     setSyncDot(true);
   } catch(e) {
     try{comandas=JSON.parse(localStorage.getItem('i_cmd')||'[]');}catch(e2){}
@@ -678,7 +683,7 @@ async function guardar(){
   try {
     await fetch('/api/guardar',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','X-API-Key':API_KEY},
       body:JSON.stringify({cmd:comandas,vta:ventas,mes:meseros,canc:cancelaciones})
     });
     // Actualizar marca de tiempo local para que el poll no recargue el estado que acabamos de guardar
@@ -686,13 +691,21 @@ async function guardar(){
     setSyncDot(true);
   } catch(e) {
     // Fallback localStorage
+    let localOk=true;
     try{
       localStorage.setItem('i_cmd',JSON.stringify(comandas));
       localStorage.setItem('i_vta',JSON.stringify(ventas));
       localStorage.setItem('i_mes',JSON.stringify(meseros));
       localStorage.setItem('i_canc',JSON.stringify(cancelaciones));
-    }catch(e2){}
+    }catch(e2){
+      localOk=false;
+    }
     setSyncDot(false);
+    if(!localOk){
+      toast('⛔ ERROR CRÍTICO: No se pudo guardar. Anota la información manualmente.');
+    } else {
+      toast('⚠ Sin conexión — datos guardados localmente. Reconectando...');
+    }
     console.warn('Error al guardar en API:', e.message);
   }
 }
@@ -708,6 +721,12 @@ setInterval(async()=>{
     const r=await fetch('/api/lastUpdate');
     const{ts}=await r.json();
     if(ts>ultimaActualizacion&&ultimaActualizacion>0){
+      // No recargar si el usuario está en medio de crear o editar una comanda
+      if(currentItems.length>0||editandoId){
+        ultimaActualizacion=ts;
+        setSyncDot(true);
+        return;
+      }
       ultimaActualizacion=ts;
       await cargarDatos(true);
       renderAbiertas();
@@ -735,11 +754,17 @@ async function importarBackup(input){
   const file=input.files[0];if(!file)return;
   try{
     const text=await file.text();
-    const data=JSON.parse(text);
+    let data;
+    try{data=JSON.parse(text);}catch(e){throw new Error('El archivo no es un JSON válido');}
+    if(!data||typeof data!=='object')throw new Error('Formato de backup inválido');
+    if(!Array.isArray(data.cmd)||!Array.isArray(data.vta))throw new Error('El archivo no parece un backup de Instinto');
+    if(data.vta.length>0&&typeof data.vta[0].id==='undefined')throw new Error('El backup está corrupto (ventas sin ID)');
+    const pin=prompt('Ingresa el PIN de administrador para importar:');
+    if(!pin){input.value='';return;}
     const r=await fetch('/api/importar',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({pin:PIN,cmd:data.cmd||[],vta:data.vta||[],mes:data.mes||[],canc:data.canc||[]})
+      headers:{'Content-Type':'application/json','X-API-Key':API_KEY},
+      body:JSON.stringify({pin,cmd:data.cmd||[],vta:data.vta||[],mes:data.mes||[],canc:data.canc||[]})
     });
     const result=await r.json();
     if(!r.ok)throw new Error(result.error||'Error al importar');
@@ -762,16 +787,23 @@ function pedirPin(titulo, desc, callback){
   document.getElementById('modalPinGenerico').classList.add('open');
   setTimeout(()=>document.getElementById('pinInputField').focus(),100);
 }
-function submitPin(){
+async function submitPin(){
   const val=document.getElementById('pinInputField').value;
-  if(val!==PIN){
-    document.getElementById('pinError').textContent='Contraseña incorrecta';
+  try{
+    const r=await fetch('/api/validate-pin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:val})});
+    const d=await r.json();
+    if(d.ok){
+      cerrarModal('modalPinGenerico');
+      if(pinCallback){pinCallback();pinCallback=null;}
+    } else {
+      document.getElementById('pinError').textContent='Contraseña incorrecta';
+      document.getElementById('pinInputField').value='';
+      document.getElementById('pinInputField').focus();
+    }
+  }catch(e){
+    document.getElementById('pinError').textContent='Error de conexión — reintenta';
     document.getElementById('pinInputField').value='';
-    document.getElementById('pinInputField').focus();
-    return;
   }
-  cerrarModal('modalPinGenerico');
-  if(pinCallback){pinCallback();pinCallback=null;}
 }
 
 // ── MENU ──
@@ -983,28 +1015,44 @@ function imprimirCuentaMesa(id){
 }
 
 async function enviarRecibo(venta){
-  try{
-    await fetch('/api/imprimir-recibo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(venta)});
-    toast('🖨 Cuenta enviada a impresora ✓');
-  }catch(e){
-    toast('⚠ Sin conexión con impresora');
+  for(let i=0;i<3;i++){
+    try{
+      const r=await fetch('/api/imprimir-recibo',{method:'POST',headers:{'Content-Type':'application/json','X-API-Key':API_KEY},body:JSON.stringify(venta)});
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      toast('🖨 Cuenta enviada a impresora ✓');
+      return;
+    }catch(e){
+      if(i===2)toast('⚠ Sin conexión con impresora — verifica el servidor de impresión');
+      else await new Promise(r=>setTimeout(r,800));
+    }
   }
 }
 
 async function imprimirTicket(venta){
-  try{
-    const resp=await fetch(PRINT_SERVER+'/imprimir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mesa:venta.mesa,mesero:venta.mesero,hora:venta.hora,fecha:venta.fecha||new Date().toLocaleDateString('es-MX'),items:venta.items,total:venta.total,cortesias:venta.cortesias||0,pago:venta.pago||'',propina:venta.propina||0,preview:venta.preview||false})});
-    const r=await resp.json();
-    if(r.ok)toast('🖨 Ticket impreso ✓');
-  }catch(e){}
+  for(let i=0;i<3;i++){
+    try{
+      const resp=await fetch(PRINT_SERVER+'/imprimir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mesa:venta.mesa,mesero:venta.mesero,hora:venta.hora,fecha:venta.fecha||new Date().toLocaleDateString('es-MX'),items:venta.items,total:venta.total,cortesias:venta.cortesias||0,pago:venta.pago||'',propina:venta.propina||0,preview:venta.preview||false})});
+      const r=await resp.json();
+      if(r.ok){toast('🖨 Ticket impreso ✓');return;}
+    }catch(e){
+      if(i===2)toast('⚠ Servidor de impresión no responde — revisa la computadora de caja');
+      else await new Promise(r=>setTimeout(r,800));
+    }
+  }
 }
 
 async function enviarImpresion(comanda){
-  try{
-    const resp=await fetch('/api/imprimir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mesa:comanda.mesa,mesero:comanda.mesero,hora:comanda.hora,items:comanda.items})});
-    const r=await resp.json();
-    if(r.enviados>0)toast('🖨 Enviado a cocina/barra ✓');
-  }catch(e){}
+  for(let i=0;i<3;i++){
+    try{
+      const resp=await fetch('/api/imprimir',{method:'POST',headers:{'Content-Type':'application/json','X-API-Key':API_KEY},body:JSON.stringify({mesa:comanda.mesa,mesero:comanda.mesero,hora:comanda.hora,items:comanda.items})});
+      const r=await resp.json();
+      if(r.enviados>0){toast('🖨 Enviado a cocina/barra ✓');return;}
+      return;
+    }catch(e){
+      if(i===2)toast('⚠ Error al enviar a cocina/barra — reintenta');
+      else await new Promise(r=>setTimeout(r,800));
+    }
+  }
 }
 
 // ── VALIDAR / GUARDAR ──
@@ -1207,13 +1255,17 @@ function setPropinaModalCustom(val){
 function actualizarModalLines(){
   document.getElementById('modalLines').innerHTML=modalPropina>0?`<div class="ticket-line green"><span>🎁 Propina</span><span>$${modalPropina.toLocaleString()}</span></div>`:'';
 }
-function confirmarCobro(){
+async function confirmarCobro(){
   const idx=comandas.findIndex(x=>x.id===modalIdx);if(idx<0)return;
   const c=comandas[idx];
   const necesitaPin=c.cortesias>0||c.items.some(it=>it.cancelado);
   if(necesitaPin){
     const pin=document.getElementById('modalPin').value;
-    if(pin!==PIN){document.getElementById('modalPinError').textContent='Contraseña incorrecta';document.getElementById('modalPin').value='';return;}
+    try{
+      const r=await fetch('/api/validate-pin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin})});
+      const d=await r.json();
+      if(!d.ok){document.getElementById('modalPinError').textContent='Contraseña incorrecta';document.getElementById('modalPin').value='';return;}
+    }catch(e){document.getElementById('modalPinError').textContent='Error de conexión — reintenta';return;}
   }
   const cancItems=c.items.filter(it=>it.cancelado);
   if(cancItems.length){cancelaciones.push({id:Date.now(),mesa:c.mesa,mesero:c.mesero,items:JSON.parse(JSON.stringify(cancItems)),valor:cancItems.reduce((s,it)=>s+it.p*it.q,0),hora:c.hora,fecha:c.fecha||new Date().toLocaleDateString('es-MX')});}
@@ -1221,7 +1273,6 @@ function confirmarCobro(){
   const {bruto,desc,cobrable}=calcDescModal(c);
   const descObj=desc>0?{tipo:modalDescuento.tipo,pct:modalDescuento.pct,valor:desc}:null;
   const venta={...c,total:cobrable,subtotal:bruto,descuento:descObj,pago:pagoStrModal,propina:modalPropina,estado:'cerrada',...(modalPago==='Mixto'?{mixtoEf:modalMixtoEf,mixtoTj:modalMixtoTj}:{})};
-  // Protección anti-duplicado: si ya existe una venta con este mismo id de comanda, no insertar otra
   const yaExiste=ventas.some(v=>v.id===venta.id);
   if(!yaExiste) ventas.push(venta);
   else console.warn('⚠ Venta duplicada bloqueada para mesa',c.mesa,'id',venta.id);
