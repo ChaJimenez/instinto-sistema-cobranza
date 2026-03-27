@@ -86,7 +86,7 @@ app.post('/api/importar', requireAuth, async (req, res) => {
 });
 
 // ── Impresión en cocina / barra ──
-const BARRA_CATS = ['Refrescos', 'Cervezas', 'Preparados', 'Cafés'];
+const BARRA_CATS = ['Refrescos', 'Cervezas', 'Preparados'];
 
 app.post('/api/imprimir', requireAuth, async (req, res) => {
   try {
@@ -130,7 +130,7 @@ app.get('/api/print-queue', async (req, res) => {
 });
 
 // ── Re-encolar jobs que fallaron al imprimir ──
-app.post('/api/requeue', async (req, res) => {
+app.post('/api/requeue', requireAuth, async (req, res) => {
   try {
     const { jobs = [] } = req.body;
     if (jobs.length) await kv.rpush('i:printjobs', ...jobs.map(j => JSON.stringify(j)));
