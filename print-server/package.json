@@ -4,9 +4,19 @@
   "description": "Servidor de impresión local para INSTINTO POS",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build:win": "pkg server.js --target node18-win-x64 --output instinto-print.exe"
+  },
+  "pkg": {
+    "targets": [
+      "node18-win-x64"
+    ],
+    "outputPath": "dist"
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.1"
   }
 }
