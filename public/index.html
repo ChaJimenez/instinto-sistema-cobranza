@@ -1322,7 +1322,7 @@ function actualizarTotalModal(){
 
 // ── EXCLUIR VENTA DEL REPORTE ──
 function excluirVenta(id){
-  pedirPin(()=>{
+  pedirPin('Excluir venta','Ingresa la contraseña de encargado',()=>{
     const idx=ventas.findIndex(x=>x.id===id);if(idx<0)return;
     ventas[idx]={...ventas[idx],excluida:!ventas[idx].excluida};
     guardar();renderReporte();
@@ -1347,9 +1347,13 @@ function selEditPago(el,tipo){
   document.querySelectorAll('#modalEditVenta .pago-opt').forEach(e=>e.classList.remove('sel'));
   el.classList.add('sel');editPagoAct=tipo;
 }
-function guardarEdicionVenta(){
+async function guardarEdicionVenta(){
   const pin=document.getElementById('editPin').value;
-  if(pin!==PIN){document.getElementById('editPinError').textContent='Contraseña incorrecta';document.getElementById('editPin').value='';return;}
+  try{
+    const r=await fetch('/api/validate-pin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin})});
+    const d=await r.json();
+    if(!d.ok){document.getElementById('editPinError').textContent='Contraseña incorrecta';document.getElementById('editPin').value='';document.getElementById('editPin').focus();return;}
+  }catch(e){document.getElementById('editPinError').textContent='Error de conexión — reintenta';return;}
   const idx=ventas.findIndex(x=>x.id===editVentaId);if(idx<0)return;
   const v=ventas[idx];
   const nuevaPropina=parseFloat(document.getElementById('editPropina').value)||0;
@@ -2001,9 +2005,13 @@ function abrirAdmin(){
   document.getElementById('modalAdminPin').classList.add('open');
   setTimeout(()=>document.getElementById('adminPinIn').focus(),120);
 }
-function confirmarAdminPin(){
+async function confirmarAdminPin(){
   const pin=document.getElementById('adminPinIn').value;
-  if(pin!==PIN){document.getElementById('adminPinErr').textContent='PIN incorrecto';document.getElementById('adminPinIn').value='';return;}
+  try{
+    const r=await fetch('/api/validate-pin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin})});
+    const d=await r.json();
+    if(!d.ok){document.getElementById('adminPinErr').textContent='PIN incorrecto';document.getElementById('adminPinIn').value='';document.getElementById('adminPinIn').focus();return;}
+  }catch(e){document.getElementById('adminPinErr').textContent='Error de conexión — reintenta';return;}
   adminAutenticado=true;
   cerrarModal('modalAdminPin');
   const h=new Date(),fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
