@@ -400,7 +400,10 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
   <div class="admin-card" style="border-top:3px solid #2d7a2d;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #f0f0f0;">
       <div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.08em;">📦 Control de inventario <span id="invAlertaBadge" style="display:none;background:#e24b4a;color:#fff;border-radius:10px;padding:2px 8px;font-size:10px;margin-left:6px;font-weight:700;">COMPRA URGENTE</span></div>
-      <button class="btn btn-outline btn-sm" onclick="toggleInvConfig()" id="btnInvConfig" style="font-size:11px;">⚙ Configurar</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline btn-sm" onclick="toggleInvConfig()" id="btnInvConfig" style="font-size:11px;">⚙ Configurar</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('invConteoPanel').style.display=document.getElementById('invConteoPanel').style.display==='none'?'block':'none'" style="font-size:11px;color:#2d7a2d;border-color:#2d7a2d;">📋 Conteo físico</button>
+      </div>
     </div>
 
     <!-- Panel de configuración inicial -->
@@ -414,32 +417,51 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
         <div style="font-size:11px;color:#888;max-width:240px;">Todas las ventas desde esta fecha se contarán en el uso acumulado. Ajústala para incluir días anteriores.</div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Carne de res (kg)</div><input type="number" id="invInit_carne" step="0.001" min="0" placeholder="0.000" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Molida 80/20 (kg)</div><input type="number" id="invInit_carne" step="0.001" min="0" placeholder="0.000" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
         <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Pollo (kg)</div><input type="number" id="invInit_pollo" step="0.001" min="0" placeholder="0.000" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Bollos (pzas)</div><input type="number" id="invInit_bollos" step="1" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Pan brioche (pzas)</div><input type="number" id="invInit_bollos" step="1" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
         <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Papa frita (kg)</div><input type="number" id="invInit_papa" step="0.001" min="0" placeholder="0.000" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Queso americano (pzas)</div><input type="number" id="invInit_qamerica" step="1" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Queso suizo (pzas)</div><input type="number" id="invInit_qsuizo" step="1" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Q. Americano (rebanadas)</div><input type="number" id="invInit_qamerica" step="1" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Q. Suizo (rebanadas)</div><input type="number" id="invInit_qsuizo" step="1" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
       </div>
       <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Mínimos para alerta</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Carne mín. (kg)</div><input type="number" id="invMin_carne" step="0.001" min="0" placeholder="0.500" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Pollo mín. (kg)</div><input type="number" id="invMin_pollo" step="0.001" min="0" placeholder="0.240" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Bollos mín. (pzas)</div><input type="number" id="invMin_bollos" step="1" min="0" placeholder="8" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Papa frita mín. (kg)</div><input type="number" id="invMin_papa" step="0.001" min="0" placeholder="2.000" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Q. americano mín. (pzas)</div><input type="number" id="invMin_qamerica" step="1" min="0" placeholder="10" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Q. suizo mín. (pzas)</div><input type="number" id="invMin_qsuizo" step="1" min="0" placeholder="10" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Molida mín. (kg)</div><input type="number" id="invMin_carne" step="0.001" min="0" placeholder="30" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Pollo mín. (kg)</div><input type="number" id="invMin_pollo" step="0.001" min="0" placeholder="15" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Pan brioche mín. (pzas)</div><input type="number" id="invMin_bollos" step="1" min="0" placeholder="500" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Papa frita mín. (kg)</div><input type="number" id="invMin_papa" step="0.001" min="0" placeholder="20" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Q. Americano mín. (reb)</div><input type="number" id="invMin_qamerica" step="1" min="0" placeholder="96" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Q. Suizo mín. (reb)</div><input type="number" id="invMin_qsuizo" step="1" min="0" placeholder="144" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
       </div>
       <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Proveedores</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Carne de res</div><input type="text" id="invProv_carne" placeholder="Alma Alexis" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Molida 80/20</div><input type="text" id="invProv_carne" placeholder="Alma Alexis" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
         <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Pollo</div><input type="text" id="invProv_pollo" placeholder="—" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Bollos de pan</div><input type="text" id="invProv_bollos" placeholder="Pan" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
+        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Pan brioche</div><input type="text" id="invProv_bollos" placeholder="Pan" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
         <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Papa frita</div><input type="text" id="invProv_papa" placeholder="Oscar Caballero" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
         <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Queso americano</div><input type="text" id="invProv_qamerica" placeholder="Kirkland" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
         <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Queso suizo</div><input type="text" id="invProv_qsuizo" placeholder="Kirkland" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
       </div>
       <button class="btn btn-dark btn-sm" onclick="guardarInvConfig()" style="background:#2d7a2d;border-color:#2d7a2d;">✓ Guardar y activar Día 1</button>
+    </div>
+
+    <!-- Panel: Aplicar conteo físico retroactivo -->
+    <div id="invConteoPanel" style="display:none;background:#f0fff4;border:1px solid #b7e4c7;border-radius:10px;padding:16px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:600;color:#2d7a2d;margin-bottom:4px;">📋 Aplicar conteo físico — retroactivo</div>
+      <div style="font-size:12px;color:#555;margin-bottom:14px;">Ingresa el stock <strong>actual</strong> (conteo de hoy). El sistema calculará el inventario inicial restando el uso acumulado de todas las ventas.</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
+        <div><div style="font-size:11px;color:#555;margin-bottom:4px;">Molida 80/20 (kg)</div><input type="number" id="invConteo_carne" step="0.001" min="0" placeholder="0.000" value="12" style="width:100%;padding:8px 10px;border:1px solid #b7e4c7;border-radius:8px;font-size:14px;outline:none;background:#fff;" /></div>
+        <div><div style="font-size:11px;color:#555;margin-bottom:4px;">Pollo (kg)</div><input type="number" id="invConteo_pollo" step="0.001" min="0" placeholder="0.000" value="7.5" style="width:100%;padding:8px 10px;border:1px solid #b7e4c7;border-radius:8px;font-size:14px;outline:none;background:#fff;" /></div>
+        <div><div style="font-size:11px;color:#555;margin-bottom:4px;">Pan brioche (pzas)</div><input type="number" id="invConteo_bollos" step="1" min="0" placeholder="0" value="163" style="width:100%;padding:8px 10px;border:1px solid #b7e4c7;border-radius:8px;font-size:14px;outline:none;background:#fff;" /></div>
+        <div><div style="font-size:11px;color:#555;margin-bottom:4px;">Papa frita (kg)</div><input type="number" id="invConteo_papa" step="0.001" min="0" placeholder="0.000" style="width:100%;padding:8px 10px;border:1px solid #b7e4c7;border-radius:8px;font-size:14px;outline:none;background:#fff;" /></div>
+        <div><div style="font-size:11px;color:#555;margin-bottom:4px;">Q. Americano (rebanadas)</div><input type="number" id="invConteo_qamerica" step="1" min="0" placeholder="0" value="96" style="width:100%;padding:8px 10px;border:1px solid #b7e4c7;border-radius:8px;font-size:14px;outline:none;background:#fff;" title="4 Pqt × 24 rebanadas = 96" /></div>
+        <div><div style="font-size:11px;color:#555;margin-bottom:4px;">Q. Suizo (rebanadas)</div><input type="number" id="invConteo_qsuizo" step="1" min="0" placeholder="0" value="192" style="width:100%;padding:8px 10px;border:1px solid #b7e4c7;border-radius:8px;font-size:14px;outline:none;background:#fff;" title="8 Pqt × 24 rebanadas = 192" /></div>
+      </div>
+      <div style="font-size:11px;color:#888;margin-bottom:12px;">Quesos: 1 Pqt ≈ 24 rebanadas · Papa: ingresa en kg (1 caja ≈ 20 kg)</div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-dark btn-sm" onclick="aplicarStockActual()" style="background:#2d7a2d;border-color:#2d7a2d;">✓ Aplicar retroactivamente</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('invConteoPanel').style.display='none'">Cancelar</button>
+      </div>
     </div>
 
     <!-- Dashboard de inventario -->
@@ -1741,12 +1763,12 @@ function fmtKg(g){return(g/1000).toFixed(3)+' kg';}
 // ── INVENTARIO ──
 // Catálogo de ingredientes: auto=calculado desde ventas | manual=solo compras
 const INV_INGS=[
-  {key:'carne',   label:'Carne de res',    unidad:'kg',  auto:true, step:'0.001',defMin:0.500, fmt:v=>v.toFixed(3)+' kg'},
-  {key:'pollo',   label:'Pollo',           unidad:'kg',  auto:true, step:'0.001',defMin:0.240, fmt:v=>v.toFixed(3)+' kg'},
-  {key:'bollos',  label:'Bollos de pan',   unidad:'pzas',auto:true, step:'1',    defMin:8,     fmt:v=>Math.round(v)+' pzas'},
-  {key:'papa',    label:'Papa frita',      unidad:'kg',  auto:true, step:'0.001',defMin:2.000, fmt:v=>v.toFixed(3)+' kg'},
-  {key:'qamerica',label:'Queso americano', unidad:'pzas',auto:false,step:'1',    defMin:10,    fmt:v=>Math.round(v)+' pzas'},
-  {key:'qsuizo',  label:'Queso suizo',     unidad:'pzas',auto:false,step:'1',    defMin:10,    fmt:v=>Math.round(v)+' pzas'},
+  {key:'carne',   label:'Molida 80/20',    unidad:'kg',  auto:true, step:'0.001',defMin:30,    fmt:v=>v.toFixed(3)+' kg'},
+  {key:'pollo',   label:'Pollo',           unidad:'kg',  auto:true, step:'0.001',defMin:15,    fmt:v=>v.toFixed(3)+' kg'},
+  {key:'bollos',  label:'Pan brioche',     unidad:'pzas',auto:true, step:'1',    defMin:500,   fmt:v=>Math.round(v)+' pzas'},
+  {key:'papa',    label:'Papa frita',      unidad:'kg',  auto:true, step:'0.001',defMin:20,    fmt:v=>v.toFixed(3)+' kg'},
+  {key:'qamerica',label:'Q. Americano',    unidad:'pzas',auto:false,step:'1',    defMin:96,    fmt:v=>Math.round(v)+' reb'},
+  {key:'qsuizo',  label:'Q. Suizo',        unidad:'pzas',auto:false,step:'1',    defMin:144,   fmt:v=>Math.round(v)+' reb'},
 ];
 const INV_PROVS_DEFAULT={carne:'Alma Alexis',pollo:'',bollos:'Pan',papa:'Oscar Caballero',qamerica:'Kirkland',qsuizo:'Kirkland'};
 let inventario={
@@ -1811,20 +1833,24 @@ function guardarInvConfig(){
 }
 
 function _usoAcumulado(){
-  const base={};INV_INGS.forEach(i=>base[i.key]=0);
-  if(!inventario.diaInicio)return base;
+  const base=()=>{const o={};INV_INGS.forEach(i=>o[i.key]=0);return o;};
+  const empty={ventas:base(),cortesias:base(),cancelaciones:base()};
+  if(!inventario.diaInicio)return empty;
   const vs=ventas.filter(v=>!v.excluida&&v.id>=inventario.diaInicio);
-  let cg=0,pg=0,b=0,papag=0,qa=0,qs=0;
-  vs.forEach(v=>v.items.filter(it=>!it.cancelado).forEach(it=>{
+  vs.forEach(v=>v.items.forEach(it=>{
     const cfg=MP[it.n];if(!cfg)return;
-    cg+=(cfg.carne||0)*it.q*80;
-    pg+=(cfg.pollo||0)*it.q*120;
-    b+=(cfg.bollo||0)*it.q;
-    papag+=(cfg.papa||0)*it.q;
-    qa+=(cfg.qamerica||0)*it.q;
-    qs+=(cfg.qsuizo||0)*it.q;
+    const vals={
+      carne:(cfg.carne||0)*it.q*80/1000,
+      pollo:(cfg.pollo||0)*it.q*120/1000,
+      bollos:(cfg.bollo||0)*it.q,
+      papa:(cfg.papa||0)*it.q/1000,
+      qamerica:(cfg.qamerica||0)*it.q,
+      qsuizo:(cfg.qsuizo||0)*it.q,
+    };
+    const target=it.cancelado?empty.cancelaciones:it.cortesia?empty.cortesias:empty.ventas;
+    INV_INGS.forEach(i=>{target[i.key]+=(vals[i.key]||0);});
   }));
-  return{...base,carne:cg/1000,pollo:pg/1000,bollos:b,papa:papag/1000,qamerica:qa,qsuizo:qs};
+  return empty;
 }
 function _totalComprado(){
   const t={};INV_INGS.forEach(i=>t[i.key]=0);
@@ -1832,10 +1858,35 @@ function _totalComprado(){
   return t;
 }
 function _stockActual(){
-  const uso=_usoAcumulado(),comp=_totalComprado();
-  const s={uso,comp};
-  INV_INGS.forEach(i=>s[i.key]=(inventario.stockInicial[i.key]||0)+(comp[i.key]||0)-(uso[i.key]||0));
+  const desglose=_usoAcumulado(),comp=_totalComprado();
+  // Uso real = ventas + cortesías (ambas consumen físicamente el producto)
+  const usoReal={};INV_INGS.forEach(i=>usoReal[i.key]=(desglose.ventas[i.key]||0)+(desglose.cortesias[i.key]||0));
+  const s={uso:usoReal,usoVentas:desglose.ventas,usoCortesias:desglose.cortesias,usoCancelaciones:desglose.cancelaciones,comp};
+  INV_INGS.forEach(i=>s[i.key]=(inventario.stockInicial[i.key]||0)+(comp[i.key]||0)-usoReal[i.key]);
   return s;
+}
+function aplicarStockActual(){
+  // Toma el conteo físico de hoy y calcula el stockInicial retroactivo
+  const hoy={};
+  INV_INGS.forEach(i=>{
+    const el=document.getElementById('invConteo_'+i.key);
+    hoy[i.key]=i.unidad==='pzas'?parseInt(el&&el.value)||0:parseFloat(el&&el.value)||0;
+  });
+  if(!inventario.diaInicio){
+    // Usar la venta más antigua disponible como Día 1
+    const ids=ventas.map(v=>v.id).filter(Boolean);
+    inventario.diaInicio=ids.length?Math.min(...ids):new Date(_fechaHoy()+'T00:00:00').getTime();
+  }
+  const desglose=_usoAcumulado(),comp=_totalComprado();
+  const usoReal={};INV_INGS.forEach(i=>usoReal[i.key]=(desglose.ventas[i.key]||0)+(desglose.cortesias[i.key]||0));
+  // stockInicial = conteo_hoy + uso_acumulado - compras (para que stockActual = conteo_hoy)
+  INV_INGS.forEach(i=>{
+    inventario.stockInicial[i.key]=Math.max(0,hoy[i.key]+usoReal[i.key]-(comp[i.key]||0));
+  });
+  guardarInventario();
+  document.getElementById('invConteoPanel').style.display='none';
+  renderInventario();
+  toast('Inventario aplicado retroactivamente desde '+_strDesdeTs(inventario.diaInicio)+' ✓');
 }
 
 function switchInvTab(tab){
@@ -1982,26 +2033,33 @@ function renderInventario(){
 
   document.getElementById('invTabEstado').innerHTML=cards+(sinConfig?'':`
     <div style="margin-top:16px;overflow-x:auto;">
-      <table class="report-table" style="margin-bottom:6px;min-width:640px;">
+      <table class="report-table" style="margin-bottom:6px;min-width:780px;">
         <thead><tr>
-          <th>Ingrediente</th><th style="text-align:right;">Stock inicial</th>
-          <th style="text-align:right;">+ Comprado</th><th style="text-align:right;">− Uso acum.</th>
+          <th>Ingrediente</th><th style="text-align:right;">Inicial</th>
+          <th style="text-align:right;">+ Comprado</th>
+          <th style="text-align:right;">− Ventas</th>
+          <th style="text-align:right;color:#b06800;">− Cortesías</th>
+          <th style="text-align:right;color:#888;">(Cancelac.)</th>
           <th style="text-align:right;">Stock actual</th><th style="text-align:right;">Mínimo</th>
         </tr></thead>
         <tbody>${INV_INGS.map(i=>{
-          const est=estIng(i),val=s[i.key]||0,comp=s.comp[i.key]||0,uso=s.uso[i.key]||0,ini=inventario.stockInicial[i.key]||0,min=m[i.key]||i.defMin;
+          const est=estIng(i),val=s[i.key]||0,comp=s.comp[i.key]||0;
+          const usoV=s.usoVentas[i.key]||0,usoC=s.usoCortesias[i.key]||0,usoK=s.usoCancelaciones[i.key]||0;
+          const ini=inventario.stockInicial[i.key]||0,min=m[i.key]||i.defMin;
           const col=est==='alerta'?'#e24b4a':est==='aviso'?'#b06800':'#0D2A5E';
           return`<tr>
             <td style="font-weight:500;">${i.label}${i.auto?autoLabel:manualLabel}</td>
             <td style="text-align:right;">${i.fmt(ini)}</td>
-            <td style="text-align:right;color:#2d7a2d;">+${i.fmt(comp)}</td>
-            <td style="text-align:right;color:${uso>0?'#e24b4a':'#aaa'};">${uso>0?'−'+i.fmt(uso):'—'}</td>
+            <td style="text-align:right;color:#2d7a2d;">${comp>0?'+'+i.fmt(comp):'—'}</td>
+            <td style="text-align:right;color:${usoV>0?'#e24b4a':'#aaa'};">${usoV>0?'−'+i.fmt(usoV):'—'}</td>
+            <td style="text-align:right;color:${usoC>0?'#b06800':'#aaa'};">${usoC>0?'−'+i.fmt(usoC):'—'}</td>
+            <td style="text-align:right;color:#aaa;font-size:11px;">${usoK>0?'('+i.fmt(usoK)+')':'—'}</td>
             <td style="text-align:right;font-weight:700;color:${col};">${i.fmt(val)}</td>
             <td style="text-align:right;color:#888;">${i.fmt(min)}</td>
           </tr>`;}).join('')}
         </tbody>
       </table>
-      <div style="font-size:11px;color:#aaa;">AUTO = calculado desde ventas desde Día 1 (${new Date(inventario.diaInicio).toLocaleDateString('es-MX')}) · MANUAL = solo compras registradas</div>
+      <div style="font-size:11px;color:#aaa;margin-bottom:4px;">AUTO = desde ventas · Día 1: ${new Date(inventario.diaInicio).toLocaleDateString('es-MX')} · Cortesías descuentan stock · Cancelaciones en paréntesis = informativo, no descontado</div>
     </div>`);
 }
 
