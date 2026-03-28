@@ -1100,8 +1100,11 @@ function buildComanda(estado){
 function guardarCancelacionesItems(){
   const mesa=document.getElementById('mesa').value.trim();
   const mesero=document.getElementById('meseroSel').value;
-  const cancelados=currentItems.filter(it=>it.cancelado);
-  if(cancelados.length){cancelaciones.push({id:Date.now(),mesa,mesero,items:JSON.parse(JSON.stringify(cancelados)),valor:cancelados.reduce((s,it)=>s+it.p*it.q,0),hora:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),fecha:new Date().toLocaleDateString('es-MX')});}
+  const cancelados=currentItems.filter(it=>it.cancelado&&!it._loggedCanc);
+  if(cancelados.length){
+    cancelaciones.push({id:Date.now(),mesa,mesero,items:JSON.parse(JSON.stringify(cancelados)),valor:cancelados.reduce((s,it)=>s+it.p*it.q,0),hora:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),fecha:new Date().toLocaleDateString('es-MX')});
+    cancelados.forEach(it=>it._loggedCanc=true);
+  }
 }
 
 function resetForm(){
@@ -1151,6 +1154,15 @@ function editarComanda(id){
   const c=comandas[idx];
   document.getElementById('mesa').value=c.mesa;renderMeseroSelect();document.getElementById('meseroSel').value=c.mesero;
   currentItems=JSON.parse(JSON.stringify(c.items));currentPago='Efectivo';currentPropina=0;editandoId=id;
+  // Restaurar descuento
+  currentDescuento=c.descuento?{tipo:c.descuento.tipo,pct:c.descuento.pct||0,valor:c.descuento.valor||0}:{tipo:null,pct:0,valor:0};
+  document.querySelectorAll('#screen-nueva .pago-opt[onclick^="selDesc"]').forEach(el=>{
+    const t=el.getAttribute('onclick').match(/selDesc\(this,'?([^'")]*)'?\)/);
+    el.classList.toggle('sel',t&&t[1]===currentDescuento.tipo||(t&&t[1]==='null'&&!currentDescuento.tipo));
+  });
+  const descPctWrap=document.getElementById('descPctWrap');
+  if(descPctWrap)descPctWrap.style.display=currentDescuento.tipo==='pct'?'block':'none';
+  if(currentDescuento.tipo==='pct'&&currentDescuento.pct){const el=document.getElementById('descPct');if(el)el.value=currentDescuento.pct;}
   comandas.splice(idx,1);guardar();renderTicket();
   document.getElementById('editingBanner').classList.add('show');
   switchTab('nueva');toast('Editando mesa '+c.mesa);
@@ -1267,7 +1279,7 @@ async function confirmarCobro(){
       if(!d.ok){document.getElementById('modalPinError').textContent='Contraseña incorrecta';document.getElementById('modalPin').value='';return;}
     }catch(e){document.getElementById('modalPinError').textContent='Error de conexión — reintenta';return;}
   }
-  const cancItems=c.items.filter(it=>it.cancelado);
+  const cancItems=c.items.filter(it=>it.cancelado&&!it._loggedCanc);
   if(cancItems.length){cancelaciones.push({id:Date.now(),mesa:c.mesa,mesero:c.mesero,items:JSON.parse(JSON.stringify(cancItems)),valor:cancItems.reduce((s,it)=>s+it.p*it.q,0),hora:c.hora,fecha:c.fecha||new Date().toLocaleDateString('es-MX')});}
   const pagoStrModal=modalPago==='Mixto'?`Mixto ($${modalMixtoEf.toLocaleString()} ef / $${modalMixtoTj.toLocaleString()} tj)`:modalPago;
   const {bruto,desc,cobrable}=calcDescModal(c);
@@ -1392,9 +1404,8 @@ function renderReporte(){
     ?`<div style="font-size:11px;color:#185fa5;margin-top:3px;">incl. ${mAbiertas.length} mesa${mAbiertas.length>1?'s':''} abierta${mAbiertas.length>1?'s':''}: $${abiertasTotal.toLocaleString()} pendiente</div>`
     :'';
   document.getElementById('statsGrid').innerHTML=`
-    <div class="stat"><label>Venta total</label><div class="val">$${granTotal.toLocaleString()}</div>${notaAbiertas}</div>
-    <div class="stat"><label>Cobrado</label><div class="val" style="font-size:18px;">$${total.toLocaleString()}</div></div>
-    ${mAbiertas.length>0?`<div class="stat"><label>Mesas abiertas</label><div class="val" style="color:#185fa5;">$${abiertasTotal.toLocaleString()}</div><div style="font-size:11px;color:#185fa5;">${mAbiertas.map(c=>'Mesa '+c.mesa).join(' · ')}</div></div>`:''}
+    <div class="stat"><label>Cobrado</label><div class="val">$${total.toLocaleString()}</div></div>
+    ${mAbiertas.length>0?`<div class="stat"><label>Proyectado (incl. abiertas)</label><div class="val" style="font-size:18px;color:#185fa5;">$${granTotal.toLocaleString()}</div><div style="font-size:11px;color:#185fa5;">${mAbiertas.map(c=>'Mesa '+c.mesa+' $'+c.total.toLocaleString()).join(' · ')}</div></div>`:''}
     <div class="stat"><label>Comandas cerradas</label><div class="val">${vFilt.length}</div></div>
     <div class="stat"><label>Ticket promedio</label><div class="val">$${ticket.toLocaleString()}</div></div>
     <div class="stat"><label>Propinas</label><div class="val green">$${propTotal.toLocaleString()}</div></div>
