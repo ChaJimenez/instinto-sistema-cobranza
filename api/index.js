@@ -86,7 +86,7 @@ app.post('/api/importar', requireAuth, async (req, res) => {
 });
 
 // ── Impresión en cocina / barra ──
-const BARRA_CATS = ['Refrescos', 'Cervezas', 'Preparados'];
+const BARRA_CATS = ['Refrescos', 'Cervezas', 'Cervezas Artesanales', 'Preparados'];
 
 app.post('/api/imprimir', requireAuth, async (req, res) => {
   try {

@@ -613,10 +613,11 @@ const MENU = {
   "Combos":[{n:"Burger + Papas + Refresco",p:158}],
   "Refrescos":[{n:"Agua",p:45},{n:"Soda Casera",p:45},{n:"Coca Cola Familiar",p:55},{n:"Agua Mineral Zifón",p:45}],
   "Cervezas":[{n:"Corona",p:60},{n:"Victoria",p:60},{n:"Pacífico",p:60},{n:"Modelo Especial",p:75},{n:"Negra Modelo",p:80},{n:"Michelob Ultra",p:80},{n:"Stella Artois",p:80},{n:"Corona Familiar",p:165},{n:"Victoria Familiar",p:165}],
-  "Preparados":[{n:"Michelada / Cubana",p:40},{n:"Clamato Preparado",p:80},{n:"Mezcalita",p:125}],
+  "Preparados":[{n:"Michelada / Cubana",p:40},{n:"Clamato Preparado",p:80},{n:"Mezcalita",p:125},{n:"Shot de Mezcal",p:80}],
+  "Cervezas Artesanales":[{n:"Suavecipa",p:100},{n:"Chelanga",p:100},{n:"Porteratzo",p:110},{n:"American Pale Ale",p:110}],
   "Cafés":[{n:"Americano",p:35},{n:"Cappuccino",p:45},{n:"Espresso",p:35}]
 };
-const EXTRAS=[{n:"Crispy onions",p:35},{n:"Extra carne",p:55},{n:"Puré de papa",p:35},{n:"Aguacate",p:55},{n:"Tocino extra",p:35},{n:"Chicharrón carnoso",p:50}];
+const EXTRAS=[{n:"Crispy onions",p:35},{n:"Extra carne",p:55},{n:"Puré de papa",p:35},{n:"Aguacate",p:55},{n:"Tocino extra",p:35},{n:"Chicharrón carnoso",p:50},{n:"Salsa de queso con tocino",p:38},{n:"Bolita de helado",p:30}];
 
 // ── MATERIA PRIMA — Config de insumos por producto ──
 // carne: bolitas de 80g de res · bollo: piezas de pan · pollo: piezas de pollo
@@ -643,7 +644,7 @@ let ultimaActualizacion=0;
 let editVentaId=null, editPagoAct='';
 let currentDescuento={tipo:null,pct:0,valor:0};
 let modalDescuento={tipo:null,pct:0,valor:0};
-const BARRA_CATS_FRONT=['Refrescos','Cervezas','Preparados','Cafés'];
+const BARRA_CATS_FRONT=['Refrescos','Cervezas','Cervezas Artesanales','Preparados','Cafés'];
 
 // Formatea propinas con decimales si los tiene (ej: 67.9, no 68)
 function fmtProp(n){
