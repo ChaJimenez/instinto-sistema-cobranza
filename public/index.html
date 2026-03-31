@@ -620,19 +620,34 @@ const MENU = {
 const EXTRAS=[{n:"Crispy onions",p:35},{n:"Extra carne",p:55},{n:"Puré de papa",p:35},{n:"Aguacate",p:55},{n:"Tocino extra",p:35},{n:"Chicharrón carnoso",p:50},{n:"Salsa de queso con tocino",p:38},{n:"Bolita de helado",p:30}];
 
 // ── MATERIA PRIMA — Config de insumos por producto ──
-// carne: bolitas de 80g de res · bollo: piezas de pan · pollo: piezas de pollo
-// Recetas: carne=bolitas×80g, pollo=piezas×120g, bollo=pan, papa=gramos, qamerica/qsuizo=rebanadas
+// carne:    bolitas de 80g de res (smash) — unidades → kg automático
+// pollo:    piezas de 120g — unidades → kg automático
+// bollo:    piezas de pan brioche — conteo directo
+// papa:     gramos por porción → kg automático (180g estándar individual)
+// camote:   gramos por porción → kg automático (180g estándar individual)
+// tocino:   gramos por porción → kg automático (25g = 2-3 tiras)
+// qamerica / qsuizo: rebanadas — conteo directo (control manual)
 const MP={
-  'Cheeseburger Clásica':            {carne:1, bollo:1, pollo:0, papa:0,   qamerica:1, qsuizo:0},
-  'Doble Doble':                     {carne:2, bollo:1, pollo:0, papa:0,   qamerica:1, qsuizo:1},
-  'Hamburguesa con Tocino':          {carne:2, bollo:1, pollo:0, papa:0,   qamerica:1, qsuizo:1}, // doble carne según menú
-  'Crispy Chicken Hot Honey':        {carne:0, bollo:1, pollo:1, papa:0,   qamerica:0, qsuizo:0},
-  'Vegetariana':                     {carne:0, bollo:1, pollo:0, papa:0,   qamerica:1, qsuizo:0}, // carne vegetal, no res
-  'Burger + Papas + Refresco':       {carne:1, bollo:1, pollo:0, papa:200, qamerica:1, qsuizo:0}, // combo = cheese + papas 200g
-  'Extra carne':                     {carne:1, bollo:0, pollo:0, papa:0,   qamerica:0, qsuizo:0},
-  'Papas Fritas':                    {carne:0, bollo:0, pollo:0, papa:200, qamerica:0, qsuizo:0}, // 200g por porción
-  'Papas con Salsa de Queso y Tocino':{carne:0,bollo:0, pollo:0, papa:200, qamerica:0, qsuizo:0},
-  'Chicharrón Carnoso':              {carne:0, bollo:0, pollo:0, papa:200, qamerica:0, qsuizo:0},
+  // ── HAMBURGUESAS ──
+  'Cheeseburger Clásica':             {carne:1, bollo:1, pollo:0, papa:0,   camote:0, tocino:0,  qamerica:1, qsuizo:0},
+  'Doble Doble':                      {carne:2, bollo:1, pollo:0, papa:0,   camote:0, tocino:0,  qamerica:1, qsuizo:1},
+  'Hamburguesa con Tocino':           {carne:2, bollo:1, pollo:0, papa:0,   camote:0, tocino:25, qamerica:1, qsuizo:1},
+  'Crispy Chicken Hot Honey':         {carne:0, bollo:1, pollo:1, papa:0,   camote:0, tocino:0,  qamerica:0, qsuizo:0},
+  'Vegetariana':                      {carne:0, bollo:1, pollo:0, papa:0,   camote:0, tocino:0,  qamerica:1, qsuizo:0},
+  // ── COMBOS ──
+  'Burger + Papas + Refresco':        {carne:1, bollo:1, pollo:0, papa:180, camote:0, tocino:0,  qamerica:1, qsuizo:0},
+  // ── ENTRADAS ──
+  'Papas Fritas':                     {carne:0, bollo:0, pollo:0, papa:180, camote:0, tocino:0,  qamerica:0, qsuizo:0},
+  'Bastones de Camote':               {carne:0, bollo:0, pollo:0, papa:0,   camote:180,tocino:0, qamerica:0, qsuizo:0},
+  'Papas con Salsa Queso y Tocino':   {carne:0, bollo:0, pollo:0, papa:180, camote:0, tocino:25, qamerica:0, qsuizo:0},
+  'Mac & Cheese tipo NY':             {carne:0, bollo:0, pollo:0, papa:0,   camote:0, tocino:0,  qamerica:0, qsuizo:0},
+  'Chicharrón Carnoso':               {carne:0, bollo:0, pollo:0, papa:180, camote:0, tocino:0,  qamerica:0, qsuizo:0},
+  'Parmesan Grilled Cheese':          {carne:0, bollo:0, pollo:0, papa:0,   camote:0, tocino:0,  qamerica:0, qsuizo:0},
+  // ── EXTRAS / TOPPINGS ──
+  'Extra carne':                      {carne:1, bollo:0, pollo:0, papa:0,   camote:0, tocino:0,  qamerica:0, qsuizo:0},
+  'Tocino extra':                     {carne:0, bollo:0, pollo:0, papa:0,   camote:0, tocino:25, qamerica:0, qsuizo:0},
+  'Chicharrón carnoso':               {carne:0, bollo:0, pollo:0, papa:180, camote:0, tocino:0,  qamerica:0, qsuizo:0},
+  'Salsa de queso con tocino':        {carne:0, bollo:0, pollo:0, papa:0,   camote:0, tocino:15, qamerica:0, qsuizo:0},
 };
 
 // ── ESTADO EN MEMORIA ──
@@ -1768,15 +1783,17 @@ const INV_INGS=[
   {key:'pollo',   label:'Pollo',           unidad:'kg',  auto:true, step:'0.001',defMin:15,    fmt:v=>v.toFixed(3)+' kg'},
   {key:'bollos',  label:'Pan brioche',     unidad:'pzas',auto:true, step:'1',    defMin:500,   fmt:v=>Math.round(v)+' pzas'},
   {key:'papa',    label:'Papa frita',      unidad:'kg',  auto:true, step:'0.001',defMin:20,    fmt:v=>v.toFixed(3)+' kg'},
+  {key:'camote',  label:'Camote',          unidad:'kg',  auto:true, step:'0.001',defMin:5,     fmt:v=>v.toFixed(3)+' kg'},
+  {key:'tocino',  label:'Tocino',          unidad:'kg',  auto:true, step:'0.001',defMin:1,     fmt:v=>v.toFixed(3)+' kg'},
   {key:'qamerica',label:'Q. Americano',    unidad:'pzas',auto:false,step:'1',    defMin:96,    fmt:v=>Math.round(v)+' reb'},
   {key:'qsuizo',  label:'Q. Suizo',        unidad:'pzas',auto:false,step:'1',    defMin:144,   fmt:v=>Math.round(v)+' reb'},
 ];
-const INV_PROVS_DEFAULT={carne:'Alma Alexis',pollo:'',bollos:'Pan',papa:'Oscar Caballero',qamerica:'Kirkland',qsuizo:'Kirkland'};
+const INV_PROVS_DEFAULT={carne:'Alma Alexis',pollo:'',bollos:'Pan',papa:'Oscar Caballero',camote:'',tocino:'',qamerica:'Kirkland',qsuizo:'Kirkland'};
 let inventario={
-  v:2,diaInicio:null,
-  stockInicial:{carne:0,pollo:0,bollos:0,papa:0,qamerica:0,qsuizo:0},
+  v:3,diaInicio:null,
+  stockInicial:{carne:0,pollo:0,bollos:0,papa:0,camote:0,tocino:0,qamerica:0,qsuizo:0},
   compras:[],
-  minimos:{carne:0.500,pollo:0.240,bollos:8,papa:1.000,qamerica:10,qsuizo:10},
+  minimos:{carne:0.500,pollo:0.240,bollos:8,papa:1.000,camote:0.500,tocino:0.100,qamerica:10,qsuizo:10},
   proveedores:{...INV_PROVS_DEFAULT}
 };
 function cargarInventario(){
@@ -1845,6 +1862,8 @@ function _usoAcumulado(){
       pollo:(cfg.pollo||0)*it.q*120/1000,
       bollos:(cfg.bollo||0)*it.q,
       papa:(cfg.papa||0)*it.q/1000,
+      camote:(cfg.camote||0)*it.q/1000,
+      tocino:(cfg.tocino||0)*it.q/1000,
       qamerica:(cfg.qamerica||0)*it.q,
       qsuizo:(cfg.qsuizo||0)*it.q,
     };
