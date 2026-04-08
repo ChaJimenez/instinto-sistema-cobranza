@@ -353,7 +353,8 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
       <div style="font-size:12px;color:#aaa;margin-top:3px;">Acceso restringido · Solo administradores</div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
-      <button class="btn btn-outline btn-sm" onclick="exportarDashboard()" style="white-space:nowrap;color:#0D2A5E;border-color:#0D2A5E;">⬇ Exportar período</button>
+      <button class="btn btn-outline btn-sm" onclick="verReportePeriodo()" style="white-space:nowrap;background:#0D2A5E;color:#fff;border-color:#0D2A5E;">📄 Ver reporte</button>
+      <button class="btn btn-outline btn-sm" onclick="exportarDashboard()" style="white-space:nowrap;color:#0D2A5E;border-color:#0D2A5E;">⬇ Exportar JSON</button>
       <button class="btn btn-outline btn-sm" onclick="adminAutenticado=false;switchTab('nueva')" style="white-space:nowrap;">🔒 Cerrar sesión</button>
     </div>
   </div>
@@ -2879,6 +2880,259 @@ function exportarDashboard(){
   a.href=url;a.download=fname;a.click();
   URL.revokeObjectURL(url);
   toast(`Exportado ✓ — ${vFilt.length} ventas · $${total.toLocaleString()}`);
+}
+
+// ── REPORTE VISUAL DE PERÍODO ──
+function verReportePeriodo(){
+  const vFilt=getAdminVentas(),cFilt=getAdminCanc();
+  const desde=adminRango.desde,hasta=adminRango.hasta;
+  const isOneDay=desde===hasta;
+  const fmt$=n=>('$'+(+(n||0)).toLocaleString('es-MX',{minimumFractionDigits:0,maximumFractionDigits:0}));
+  const fmtD=s=>{const[y,m,d]=s.split('-');return`${d}/${m}/${y}`;};
+  const fmtDL=s=>{const d=new Date(s+'T12:00:00');return d.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});};
+
+  // Totales
+  const total=vFilt.reduce((s,v)=>s+v.total,0);
+  const propTotal=vFilt.reduce((s,v)=>s+(v.propina||0),0);
+  const cortTotal=vFilt.reduce((s,v)=>s+(v.cortesias||0),0);
+  const descTotal=vFilt.reduce((s,v)=>s+((v.descuento&&v.descuento.valor)||0),0);
+  const cancTotal=cFilt.reduce((s,c)=>s+c.valor,0);
+  const ticket=vFilt.length?Math.round(total/vFilt.length):0;
+
+  // Formas de pago
+  const metodos={};let mixtoEfT=0,mixtoTjT=0;
+  vFilt.forEach(v=>{
+    const base=v.pago.startsWith('Mixto')?'Mixto':v.pago;
+    if(!metodos[base])metodos[base]={n:0,t:0,p:0};
+    metodos[base].n++;metodos[base].t+=v.total;metodos[base].p+=(v.propina||0);
+    if(base==='Mixto'){
+      if(v.mixtoEf!==undefined){mixtoEfT+=v.mixtoEf;mixtoTjT+=v.mixtoTj;}
+    }
+  });
+  const efTotal=(metodos['Efectivo']?.t||0)+mixtoEfT;
+  const tjTotal=(metodos['Tarjeta']?.t||0)+mixtoTjT;
+
+  // Por mesero
+  const xMes={};
+  vFilt.forEach(v=>{if(!xMes[v.mesero])xMes[v.mesero]={n:0,t:0,p:0};xMes[v.mesero].n++;xMes[v.mesero].t+=v.total;xMes[v.mesero].p+=(v.propina||0);});
+  const mesArr=Object.entries(xMes).sort((a,b)=>b[1].t-a[1].t);
+
+  // Por producto
+  const prods={};
+  vFilt.forEach(v=>{v.items.filter(it=>!it.cancelado&&!it.cortesia).forEach(it=>{if(!prods[it.n])prods[it.n]={q:0,t:0};prods[it.n].q+=it.q;prods[it.n].t+=it.p*it.q;});});
+  const topProds=Object.entries(prods).sort((a,b)=>b[1].q-a[1].q);
+
+  // Por día (si es multi-día)
+  const dates=[];
+  const cur=new Date(desde+'T12:00:00'),fin=new Date(hasta+'T12:00:00');
+  while(cur<=fin){dates.push(new Date(cur));cur.setDate(cur.getDate()+1);}
+  const porDia=dates.map(d=>{
+    const vd=vFilt.filter(v=>{const vd2=new Date(v.id);return vd2.getFullYear()===d.getFullYear()&&vd2.getMonth()===d.getMonth()&&vd2.getDate()===d.getDate();});
+    const fmt2=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    return{fecha:fmt2,label:d.toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short'}),comandas:vd.length,venta:vd.reduce((s,v)=>s+v.total,0),propinas:vd.reduce((s,v)=>s+(v.propina||0),0)};
+  }).filter(d=>d.venta>0||d.comandas>0);
+
+  // Ventas del período (detalle)
+  const ventasSorted=[...vFilt].sort((a,b)=>a.id-b.id);
+
+  const periodoLabel=isOneDay?fmtDL(desde):`${fmtD(desde)} al ${fmtD(hasta)}`;
+
+  const html=`<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>INSTINTO · Reporte ${isOneDay?fmtD(desde):fmtD(desde)+' - '+fmtD(hasta)}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f3;color:#1a1a1a;padding:24px;max-width:900px;margin:0 auto;}
+.header{background:#0D2A5E;color:#fff;padding:24px 28px;border-radius:14px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;}
+.header h1{font-size:26px;font-weight:700;letter-spacing:0.08em;}
+.header .periodo{font-size:14px;color:rgba(255,255,255,.7);margin-top:4px;}
+.header .gen{font-size:11px;color:rgba(255,255,255,.4);}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+.kpi{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:16px 14px;}
+.kpi.primary{background:#0D2A5E;color:#fff;}
+.kpi label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;display:block;margin-bottom:6px;}
+.kpi.primary label{color:rgba(255,255,255,.6);}
+.kpi .val{font-size:22px;font-weight:700;color:#0D2A5E;line-height:1;}
+.kpi.primary .val{color:#fff;}
+.kpi.green .val{color:#2d7a2d;}
+.kpi.amber .val{color:#b06800;}
+.kpi.red .val{color:#e24b4a;}
+.kpi .sub{font-size:11px;color:#aaa;margin-top:5px;}
+.kpi.primary .sub{color:rgba(255,255,255,.5);}
+.card{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:18px;margin-bottom:16px;}
+.card h2{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #f0f0f0;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{background:#f5f5f3;padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.04em;}
+td{padding:9px 12px;border-top:1px solid #f0f0f0;}
+.num{text-align:right;font-variant-numeric:tabular-nums;}
+.bold{font-weight:600;}
+.green{color:#2d7a2d;}
+.amber{color:#b06800;}
+.red{color:#e24b4a;}
+.blue{color:#0D2A5E;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.bar-wrap{background:#f0f0f0;border-radius:4px;height:6px;overflow:hidden;margin:4px 0;}
+.bar{height:100%;border-radius:4px;}
+.section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin:20px 0 8px;}
+.footer{text-align:center;font-size:11px;color:#bbb;margin-top:28px;padding-top:16px;border-top:1px solid #e8e8e8;}
+@media print{body{padding:8px;background:#fff;}.header{border-radius:0;margin-bottom:16px;} @page{margin:1.5cm;size:A4;}}
+@media(max-width:640px){.kpi-grid{grid-template-columns:1fr 1fr;}.two-col{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>INSTINTO</h1>
+    <div class="periodo">Reporte de ventas · ${periodoLabel}</div>
+  </div>
+  <div style="text-align:right;">
+    <div class="gen">Generado ${new Date().toLocaleString('es-MX')}</div>
+    <button onclick="window.print()" style="margin-top:8px;padding:8px 16px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:8px;color:#fff;cursor:pointer;font-size:13px;">🖨 Imprimir / PDF</button>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi primary">
+    <label>Venta total</label>
+    <div class="val">${fmt$(total)}</div>
+    <div class="sub">${vFilt.length} comanda${vFilt.length!==1?'s':''}</div>
+  </div>
+  <div class="kpi">
+    <label>Ticket promedio</label>
+    <div class="val blue">${fmt$(ticket)}</div>
+    <div class="sub">por comanda</div>
+  </div>
+  <div class="kpi green">
+    <label>Propinas</label>
+    <div class="val">${fmt$(propTotal)}</div>
+    <div class="sub">${total>0?Math.round(propTotal/total*100):0}% de la venta</div>
+  </div>
+  <div class="kpi">
+    <label>Efectivo</label>
+    <div class="val blue">${fmt$(efTotal)}</div>
+    <div class="sub">${total>0?Math.round(efTotal/total*100):0}% del total</div>
+  </div>
+  <div class="kpi">
+    <label>Tarjeta</label>
+    <div class="val blue">${fmt$(tjTotal)}</div>
+    <div class="sub">${total>0?Math.round(tjTotal/total*100):0}% del total</div>
+  </div>
+  ${descTotal>0?`<div class="kpi amber"><label>Descuentos</label><div class="val">${fmt$(descTotal)}</div><div class="sub">${vFilt.filter(v=>v.descuento&&v.descuento.valor>0).length} mesa${vFilt.filter(v=>v.descuento&&v.descuento.valor>0).length!==1?'s':''}</div></div>`:''}
+  ${cortTotal>0?`<div class="kpi amber"><label>Cortesías</label><div class="val">${fmt$(cortTotal)}</div><div class="sub">Costo de casa</div></div>`:''}
+  ${cancTotal>0?`<div class="kpi red"><label>Cancelaciones</label><div class="val">${fmt$(cancTotal)}</div><div class="sub">${cFilt.length} evento${cFilt.length!==1?'s':''}</div></div>`:''}
+</div>
+
+${!isOneDay&&porDia.length>1?`
+<div class="card">
+  <h2>Ventas por día</h2>
+  <table>
+    <thead><tr><th>Día</th><th class="num">Comandas</th><th class="num">Venta</th><th class="num">Propinas</th></tr></thead>
+    <tbody>
+      ${porDia.map(d=>`<tr><td>${d.label}</td><td class="num">${d.comandas}</td><td class="num bold">${fmt$(d.venta)}</td><td class="num green">${d.propinas>0?fmt$(d.propinas):'—'}</td></tr>`).join('')}
+      <tr style="background:#f5f5f3;font-weight:700;"><td>Total</td><td class="num">${vFilt.length}</td><td class="num blue">${fmt$(total)}</td><td class="num green">${fmt$(propTotal)}</td></tr>
+    </tbody>
+  </table>
+</div>`:''}
+
+<div class="two-col">
+  <div class="card">
+    <h2>Formas de pago</h2>
+    ${Object.entries(metodos).sort((a,b)=>b[1].t-a[1].t).map(([m,d])=>{
+      const pct=total?Math.round(d.t/total*100):0;
+      const colors={'Efectivo':'#0D2A5E','Tarjeta':'#F5A020','Mixto':'#4A90C4'};
+      return`<div style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-weight:600;">${m}</span>
+          <span>${fmt$(d.t)} <span style="color:#aaa;font-size:12px;">${pct}%</span></span>
+        </div>
+        <div class="bar-wrap"><div class="bar" style="background:${colors[m]||'#888'};width:${pct}%;"></div></div>
+        <div style="font-size:11px;color:#aaa;">${d.n} cmd${d.p>0?' · prop '+fmt$(d.p):''}</div>
+      </div>`;
+    }).join('')||'<div style="color:#aaa;font-size:13px;">Sin datos</div>'}
+  </div>
+  <div class="card">
+    <h2>Meseros</h2>
+    ${mesArr.map(([m,d],i)=>{
+      const pct=total?Math.round(d.t/total*100):0;
+      return`<div style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-weight:600;">${i===0?'🥇 ':i===1?'🥈 ':i===2?'🥉 ':''}${m}</span>
+          <span>${fmt$(d.t)}</span>
+        </div>
+        <div class="bar-wrap"><div class="bar" style="background:#0D2A5E;width:${pct}%;"></div></div>
+        <div style="font-size:11px;color:#aaa;">${d.n} cmd · prom ${fmt$(Math.round(d.t/d.n))}${d.p>0?' · prop '+fmt$(d.p):''}</div>
+      </div>`;
+    }).join('')||'<div style="color:#aaa;font-size:13px;">Sin datos</div>'}
+  </div>
+</div>
+
+<div class="card">
+  <h2>Productos más vendidos</h2>
+  <table>
+    <thead><tr><th>#</th><th>Producto</th><th class="num">Cant.</th><th class="num">Total</th></tr></thead>
+    <tbody>
+      ${topProds.slice(0,20).map(([n,d],i)=>`<tr><td style="color:#aaa;">${i+1}</td><td>${n}</td><td class="num bold">${d.q}</td><td class="num">${fmt$(d.t)}</td></tr>`).join('')||'<tr><td colspan="4" style="color:#aaa;text-align:center;padding:16px;">Sin datos</td></tr>'}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Detalle de ventas</h2>
+  <table>
+    <thead><tr><th>Hora</th><th>Mesa</th><th>Mesero</th><th>Pago</th><th class="num">Desc.</th><th class="num">Propina</th><th class="num">Total</th></tr></thead>
+    <tbody>
+      ${ventasSorted.map(v=>{
+        const desc=(v.descuento&&v.descuento.valor)||0;
+        return`<tr>
+          <td>${v.hora||'—'}</td>
+          <td>${v.mesa}</td>
+          <td>${v.mesero}</td>
+          <td style="font-size:12px;">${v.pago}</td>
+          <td class="num amber">${desc>0?fmt$(desc):'—'}</td>
+          <td class="num green">${(v.propina||0)>0?fmt$(v.propina):'—'}</td>
+          <td class="num bold">${fmt$(v.total)}</td>
+        </tr>`;
+      }).join('')||'<tr><td colspan="7" style="color:#aaa;text-align:center;padding:16px;">Sin ventas en el período</td></tr>'}
+      ${vFilt.length>0?`<tr style="background:#f5f5f3;font-weight:700;"><td colspan="4">Total</td><td class="num amber">${descTotal>0?fmt$(descTotal):'—'}</td><td class="num green">${propTotal>0?fmt$(propTotal):'—'}</td><td class="num blue">${fmt$(total)}</td></tr>`:''}
+    </tbody>
+  </table>
+</div>
+
+${cortTotal>0||cFilt.length>0?`
+<div class="two-col">
+  ${cortTotal>0?`<div class="card">
+    <h2>Cortesías y descuentos</h2>
+    ${vFilt.filter(v=>(v.descuento&&v.descuento.valor>0)||(v.cortesias||0)>0).map(v=>`
+      <div style="padding:7px 0;border-bottom:1px solid #f5f5f5;font-size:13px;">
+        <span style="font-weight:600;">Mesa ${v.mesa}</span> · ${v.mesero} · ${v.hora||''}
+        ${(v.cortesias||0)>0?`<span style="float:right;color:#b06800;">cortesía ${fmt$(v.cortesias)}</span>`:''}
+        ${v.descuento&&v.descuento.valor>0?`<span style="float:right;color:#b06800;margin-right:8px;">desc −${fmt$(v.descuento.valor)}</span>`:''}
+      </div>`).join('')}
+    <div style="font-size:13px;font-weight:700;padding-top:8px;color:#b06800;">Total: ${fmt$(cortTotal+descTotal)}</div>
+  </div>`:''}
+  ${cFilt.length>0?`<div class="card">
+    <h2>Cancelaciones</h2>
+    ${cFilt.map(c=>`
+      <div style="padding:7px 0;border-bottom:1px solid #f5f5f5;font-size:13px;">
+        <span style="font-weight:600;">${c.hora||'—'}</span> Mesa ${c.mesa} · ${c.mesero}
+        <span style="float:right;color:#e24b4a;">${fmt$(c.valor)}</span>
+        <div style="font-size:11px;color:#bbb;margin-top:2px;">${c.items.map(it=>it.q+'× '+it.n).join(', ')}</div>
+      </div>`).join('')}
+    <div style="font-size:13px;font-weight:700;padding-top:8px;color:#e24b4a;">Total: ${fmt$(cancTotal)}</div>
+  </div>`:''}
+</div>`:''}
+
+<div class="footer">INSTINTO · Reporte generado el ${new Date().toLocaleString('es-MX')}</div>
+</body>
+</html>`;
+
+  const w=window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
 }
 
 function iniciarCierre(){
