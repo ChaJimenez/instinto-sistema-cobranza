@@ -153,6 +153,24 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
 @media(max-width:640px){ .admin-kpi-grid{grid-template-columns:1fr 1fr;} .admin-2col{grid-template-columns:1fr;} .akpi-val{font-size:18px;} }
 #printArea { display: none; }
 @media print { body > *:not(#printArea) { display: none !important; } #printArea { display: block !important; font-family: monospace; font-size: 13px; margin: 0; padding: 16px; max-width: 300px; } #printArea h2 { text-align: center; font-size: 18px; letter-spacing: 0.15em; margin-bottom: 4px; } #printArea .sub { text-align: center; font-size: 12px; color: #555; margin-bottom: 12px; } #printArea hr { border: none; border-top: 1px dashed #aaa; margin: 10px 0; } #printArea table { width: 100%; border-collapse: collapse; } #printArea .total-row td { font-size: 16px; font-weight: 700; padding-top: 8px; } #printArea .pie { text-align: center; font-size: 11px; color: #aaa; margin-top: 14px; } }
+/* ── BÚSQUEDA GLOBAL ── */
+.busq-input-wrap { position: relative; margin-bottom: 16px; }
+.busq-input-wrap input { width: 100%; padding: 12px 16px 12px 42px; border: 2px solid #ddd; border-radius: 12px; font-size: 16px; outline: none; transition: border-color 0.2s; background: #fafafa; }
+.busq-input-wrap input:focus { border-color: #0D2A5E; background: #fff; }
+.busq-input-wrap .busq-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #aaa; pointer-events: none; }
+.busq-sec { font-size: 10px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.1em; margin: 14px 0 6px; }
+.busq-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; cursor: pointer; transition: background 0.1s; }
+.busq-row:hover { background: #f5f5f3; }
+.busq-tag { font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 600; white-space: nowrap; }
+.busq-tag-menu { background: #e8f0ff; color: #0D2A5E; }
+.busq-tag-ing { background: #eaf3de; color: #3b6d11; }
+.busq-tag-compra { background: #fff8ed; color: #b06800; }
+.busq-tag-venta { background: #f5f5f3; color: #555; }
+.busq-row-main { flex: 1; font-size: 14px; font-weight: 500; }
+.busq-row-sub { font-size: 12px; color: #888; }
+.busq-row-right { font-size: 13px; font-weight: 600; color: #0D2A5E; white-space: nowrap; }
+.busq-empty { text-align: center; color: #aaa; font-size: 14px; padding: 32px 0; }
+.busq-hint { text-align: center; color: #bbb; font-size: 13px; padding: 28px 0; line-height: 1.8; }
 </style>
 </head>
 <body>
@@ -252,10 +270,15 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
 <!-- REPORTE -->
 <div id="screen-reporte" class="screen">
   <div class="report-filters">
-    <input type="date" id="filtroFecha" />
-    <select id="filtroMesero"><option value="">Todos los meseros</option></select>
-    <button class="btn btn-outline btn-sm" onclick="renderReporte()">Filtrar</button>
-    <button class="btn btn-outline btn-sm" onclick="exportarCorte()">📋 Copiar</button>
+    <button class="btn btn-outline btn-sm" onclick="setRangoReporte('hoy')">Hoy</button>
+    <button class="btn btn-outline btn-sm" onclick="setRangoReporte('ayer')">Ayer</button>
+    <button class="btn btn-outline btn-sm" onclick="setRangoReporte('semana')">7 días</button>
+    <button class="btn btn-outline btn-sm" onclick="setRangoReporte('mes')">Este mes</button>
+    <input type="date" id="filtroDesde" onchange="renderReporte()" />
+    <span style="color:#888;font-size:13px;align-self:center;">—</span>
+    <input type="date" id="filtroHasta" onchange="renderReporte()" />
+    <select id="filtroMesero" onchange="renderReporte()"><option value="">Todos los meseros</option></select>
+    <button class="btn btn-outline btn-sm" onclick="exportarCorte()">📋 Copiar día</button>
   </div>
   <div class="stat-grid" id="statsGrid"></div>
   <div class="sec">Por forma de pago</div>
@@ -329,7 +352,10 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
       <div style="font-size:19px;font-weight:700;color:#0D2A5E;letter-spacing:0.03em;">Dashboard Gerencial</div>
       <div style="font-size:12px;color:#aaa;margin-top:3px;">Acceso restringido · Solo administradores</div>
     </div>
-    <button class="btn btn-outline btn-sm" onclick="adminAutenticado=false;switchTab('nueva')" style="white-space:nowrap;">🔒 Cerrar sesión</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+      <button class="btn btn-outline btn-sm" onclick="exportarDashboard()" style="white-space:nowrap;color:#0D2A5E;border-color:#0D2A5E;">⬇ Exportar período</button>
+      <button class="btn btn-outline btn-sm" onclick="adminAutenticado=false;switchTab('nueva')" style="white-space:nowrap;">🔒 Cerrar sesión</button>
+    </div>
   </div>
 
   <div class="admin-rango">
@@ -400,64 +426,26 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
   <div class="admin-card" style="border-top:3px solid #2d7a2d;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #f0f0f0;">
       <div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.08em;">📦 Control de inventario <span id="invAlertaBadge" style="display:none;background:#e24b4a;color:#fff;border-radius:10px;padding:2px 8px;font-size:10px;margin-left:6px;font-weight:700;">COMPRA URGENTE</span></div>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-outline btn-sm" onclick="abrirBusqueda()" style="font-size:11px;">🔍 Buscar</button>
         <button class="btn btn-outline btn-sm" onclick="toggleInvConfig()" id="btnInvConfig" style="font-size:11px;">⚙ Configurar</button>
-        <button class="btn btn-outline btn-sm" onclick="document.getElementById('invConteoPanel').style.display=document.getElementById('invConteoPanel').style.display==='none'?'block':'none'" style="font-size:11px;color:#2d7a2d;border-color:#2d7a2d;">📋 Conteo físico</button>
+        <button class="btn btn-outline btn-sm" onclick="toggleConteoPanel()" style="font-size:11px;color:#2d7a2d;border-color:#2d7a2d;">📋 Conteo físico</button>
+        <button class="btn btn-outline btn-sm" onclick="abrirModalNuevoProductoInv()" style="font-size:11px;color:#0D2A5E;border-color:#0D2A5E;">＋ Nuevo producto</button>
       </div>
     </div>
 
-    <!-- Panel de configuración inicial -->
+    <!-- Panel de configuración inicial (contenido dinámico) -->
     <div id="invConfigPanel" style="display:none;background:#f9f9f9;border:1px solid #e8e8e8;border-radius:10px;padding:16px;margin-bottom:16px;">
       <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Inventario inicial — Día 1</div>
-      <div style="background:#fff8ed;border:1px solid #e8a020;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px;">
-        <div style="flex:1;">
-          <div style="font-size:12px;font-weight:600;color:#b06800;margin-bottom:6px;">Fecha de inicio (Día 1) — retroactivo</div>
-          <input type="date" id="invFechaInicio" style="padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;background:#fff;" />
-        </div>
-        <div style="font-size:11px;color:#888;max-width:240px;">Todas las ventas desde esta fecha se contarán en el uso acumulado. Ajústala para incluir días anteriores.</div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Molida 80/20 (kg)</div><input type="number" id="invInit_carne" step="0.001" min="0" placeholder="0.000" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Pollo (kg)</div><input type="number" id="invInit_pollo" step="0.001" min="0" placeholder="0.000" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Pan brioche (pzas)</div><input type="number" id="invInit_bollos" step="1" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Papa frita (kg)</div><input type="number" id="invInit_papa" step="0.001" min="0" placeholder="0.000" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Q. Americano (rebanadas)</div><input type="number" id="invInit_qamerica" step="1" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Q. Suizo (rebanadas)</div><input type="number" id="invInit_qsuizo" step="1" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>
-      </div>
-      <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Mínimos para alerta</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Molida mín. (kg)</div><input type="number" id="invMin_carne" step="0.001" min="0" placeholder="30" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Pollo mín. (kg)</div><input type="number" id="invMin_pollo" step="0.001" min="0" placeholder="15" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Pan brioche mín. (pzas)</div><input type="number" id="invMin_bollos" step="1" min="0" placeholder="500" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Papa frita mín. (kg)</div><input type="number" id="invMin_papa" step="0.001" min="0" placeholder="20" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Q. Americano mín. (reb)</div><input type="number" id="invMin_qamerica" step="1" min="0" placeholder="96" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Q. Suizo mín. (reb)</div><input type="number" id="invMin_qsuizo" step="1" min="0" placeholder="144" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
-      </div>
-      <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Proveedores</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Molida 80/20</div><input type="text" id="invProv_carne" placeholder="Alma Alexis" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Pollo</div><input type="text" id="invProv_pollo" placeholder="—" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Pan brioche</div><input type="text" id="invProv_bollos" placeholder="Pan" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Papa frita</div><input type="text" id="invProv_papa" placeholder="Oscar Caballero" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Queso americano</div><input type="text" id="invProv_qamerica" placeholder="Kirkland" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
-        <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Queso suizo</div><input type="text" id="invProv_qsuizo" placeholder="Kirkland" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
-      </div>
-      <button class="btn btn-dark btn-sm" onclick="guardarInvConfig()" style="background:#2d7a2d;border-color:#2d7a2d;">✓ Guardar y activar Día 1</button>
+      <div id="invConfigBody"></div>
+      <button class="btn btn-dark btn-sm" onclick="guardarInvConfig()" style="background:#2d7a2d;border-color:#2d7a2d;margin-top:14px;">✓ Guardar y activar Día 1</button>
     </div>
 
-    <!-- Panel: Aplicar conteo físico retroactivo -->
+    <!-- Panel: Aplicar conteo físico retroactivo (contenido dinámico) -->
     <div id="invConteoPanel" style="display:none;background:#f0fff4;border:1px solid #b7e4c7;border-radius:10px;padding:16px;margin-bottom:16px;">
       <div style="font-size:13px;font-weight:600;color:#2d7a2d;margin-bottom:4px;">📋 Aplicar conteo físico — retroactivo</div>
       <div style="font-size:12px;color:#555;margin-bottom:14px;">Ingresa el stock <strong>actual</strong> (conteo de hoy). El sistema calculará el inventario inicial restando el uso acumulado de todas las ventas.</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
-        <div><div style="font-size:11px;color:#555;margin-bottom:4px;">Molida 80/20 (kg)</div><input type="number" id="invConteo_carne" step="0.001" min="0" placeholder="0.000" value="12" style="width:100%;padding:8px 10px;border:1px solid #b7e4c7;border-radius:8px;font-size:14px;outline:none;background:#fff;" /></div>
-        <div><div style="font-size:11px;color:#555;margin-bottom:4px;">Pollo (kg)</div><input type="number" id="invConteo_pollo" step="0.001" min="0" placeholder="0.000" value="7.5" style="width:100%;padding:8px 10px;border:1px solid #b7e4c7;border-radius:8px;font-size:14px;outline:none;background:#fff;" /></div>
-        <div><div style="font-size:11px;color:#555;margin-bottom:4px;">Pan brioche (pzas)</div><input type="number" id="invConteo_bollos" step="1" min="0" placeholder="0" value="163" style="width:100%;padding:8px 10px;border:1px solid #b7e4c7;border-radius:8px;font-size:14px;outline:none;background:#fff;" /></div>
-        <div><div style="font-size:11px;color:#555;margin-bottom:4px;">Papa frita (kg)</div><input type="number" id="invConteo_papa" step="0.001" min="0" placeholder="0.000" value="12.24" style="width:100%;padding:8px 10px;border:1px solid #b7e4c7;border-radius:8px;font-size:14px;outline:none;background:#fff;" /></div>
-        <div><div style="font-size:11px;color:#555;margin-bottom:4px;">Q. Americano (rebanadas)</div><input type="number" id="invConteo_qamerica" step="1" min="0" placeholder="0" value="96" style="width:100%;padding:8px 10px;border:1px solid #b7e4c7;border-radius:8px;font-size:14px;outline:none;background:#fff;" title="4 Pqt × 24 rebanadas = 96" /></div>
-        <div><div style="font-size:11px;color:#555;margin-bottom:4px;">Q. Suizo (rebanadas)</div><input type="number" id="invConteo_qsuizo" step="1" min="0" placeholder="0" value="192" style="width:100%;padding:8px 10px;border:1px solid #b7e4c7;border-radius:8px;font-size:14px;outline:none;background:#fff;" title="8 Pqt × 24 rebanadas = 192" /></div>
-      </div>
-      <div style="font-size:11px;color:#888;margin-bottom:12px;">Quesos: 1 Pqt ≈ 24 rebanadas · Papa: ingresa en kg (1 caja ≈ 20 kg)</div>
+      <div id="invConteoBody" style="margin-bottom:14px;"></div>
       <div style="display:flex;gap:10px;">
         <button class="btn btn-dark btn-sm" onclick="aplicarStockActual()" style="background:#2d7a2d;border-color:#2d7a2d;">✓ Aplicar retroactivamente</button>
         <button class="btn btn-outline btn-sm" onclick="document.getElementById('invConteoPanel').style.display='none'">Cancelar</button>
@@ -574,6 +562,52 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
   </div>
 </div>
 
+<!-- MODAL: Nuevo producto de inventario -->
+<div class="modal-bg" id="modalNuevoProductoInv">
+  <div class="modal" style="max-width:420px;">
+    <div style="font-weight:600;font-size:16px;margin-bottom:14px;">＋ Nuevo producto en inventario</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div style="grid-column:1/-1;">
+        <div style="font-size:11px;color:#888;margin-bottom:4px;">Nombre del producto *</div>
+        <input type="text" id="nuevoIngNombre" placeholder="Ej. Corona, Modelo Especial, Ron…" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" onkeydown="if(event.key==='Enter')guardarNuevoProductoInv()" />
+      </div>
+      <div>
+        <div style="font-size:11px;color:#888;margin-bottom:4px;">Categoría</div>
+        <select id="nuevoIngCat" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;background:#fff;">
+          <option value="barra">🍺 Barra</option>
+          <option value="cocina">🍳 Cocina</option>
+          <option value="abarrotes">📦 Abarrotes</option>
+          <option value="limpieza">🧹 Limpieza</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#888;margin-bottom:4px;">Unidad</div>
+        <select id="nuevoIngUnidad" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;background:#fff;">
+          <option value="pzas">pzas</option>
+          <option value="botellas">botellas</option>
+          <option value="lts">litros</option>
+          <option value="kg">kg</option>
+          <option value="cajas">cajas</option>
+          <option value="latas">latas</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#888;margin-bottom:4px;">Stock mínimo</div>
+        <input type="number" id="nuevoIngMin" placeholder="Ej. 24" min="0" step="1" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" />
+      </div>
+      <div>
+        <div style="font-size:11px;color:#888;margin-bottom:4px;">Proveedor (opcional)</div>
+        <input type="text" id="nuevoIngProv" placeholder="Nombre del proveedor" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" />
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:6px;">
+      <button class="btn btn-dark" onclick="guardarNuevoProductoInv()" style="flex:1;">✓ Dar de alta</button>
+      <button class="btn btn-outline" onclick="cerrarModalNuevoProductoInv()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: PIN genérico -->
 <div class="modal-bg" id="modalPinGenerico">
   <div class="modal" style="max-width:340px;">
@@ -596,6 +630,22 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
     <div id="adminPinErr" style="color:#e24b4a;font-size:13px;min-height:20px;margin-bottom:12px;"></div>
     <button class="btn btn-dark" onclick="confirmarAdminPin()" style="background:#0D2A5E;">Entrar al dashboard</button>
     <button class="btn btn-outline" onclick="cerrarModal('modalAdminPin')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL: búsqueda global -->
+<div class="modal-bg" id="modalBusqueda">
+  <div class="modal" style="max-width:620px;">
+    <div class="busq-input-wrap">
+      <span class="busq-icon">🔍</span>
+      <input type="text" id="busqInput" placeholder="Buscar producto, ingrediente, compra, venta…" oninput="ejecutarBusqueda(this.value)" onkeydown="if(event.key==='Escape')cerrarModal('modalBusqueda')" autocomplete="off" />
+    </div>
+    <div id="busqResultados">
+      <div class="busq-hint">Escribe para buscar en todo el sistema<br><span style="font-size:11px;">Productos · Ingredientes · Compras · Ventas</span></div>
+    </div>
+    <div style="text-align:right;margin-top:14px;">
+      <button class="btn btn-outline btn-sm" onclick="cerrarModal('modalBusqueda')">Cerrar</button>
+    </div>
   </div>
 </div>
 
@@ -1418,11 +1468,26 @@ async function guardarEdicionVenta(){
 }
 
 // ── REPORTE ──
+function setRangoReporte(p){
+  const hoy=new Date();
+  const fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  let desde,hasta=fmt(hoy);
+  if(p==='hoy'){desde=fmt(hoy);}
+  else if(p==='ayer'){const ay=new Date(hoy);ay.setDate(ay.getDate()-1);desde=hasta=fmt(ay);}
+  else if(p==='semana'){const s=new Date(hoy);s.setDate(s.getDate()-6);desde=fmt(s);}
+  else if(p==='mes'){desde=fmt(new Date(hoy.getFullYear(),hoy.getMonth(),1));}
+  document.getElementById('filtroDesde').value=desde||'';
+  document.getElementById('filtroHasta').value=hasta;
+  renderReporte();
+}
+
 function renderReporte(){
-  const fechaFiltro=document.getElementById('filtroFecha').value;
+  const desdeVal=document.getElementById('filtroDesde').value;
+  const hastaVal=document.getElementById('filtroHasta').value;
   const meseroFiltro=document.getElementById('filtroMesero').value;
-  const fmtFecha=(ts)=>new Date(ts).toLocaleDateString('es-MX');
-  const matchFecha=(v)=>{if(!fechaFiltro)return true;return fmtFecha(v.id)===new Date(fechaFiltro+'T12:00:00').toLocaleDateString('es-MX');};
+  const _dateMs=d=>{const x=new Date(d+'T12:00:00');return new Date(x.getFullYear(),x.getMonth(),x.getDate()).getTime();};
+  const _vMs=v=>{const d=new Date(v.id);return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime();};
+  const matchFecha=(v)=>{const vm=_vMs(v);if(desdeVal&&vm<_dateMs(desdeVal))return false;if(hastaVal&&vm>_dateMs(hastaVal))return false;return true;};
   const matchMesero=(v)=>!meseroFiltro||v.mesero===meseroFiltro;
   const vTodas=ventas.filter(v=>matchFecha(v)&&matchMesero(v));
   const vFilt=vTodas.filter(v=>!v.excluida);
@@ -1612,7 +1677,10 @@ function generarTextoCierre(fecha){
 }
 
 function exportarCorte(){
-  const fechaFiltro=document.getElementById('filtroFecha').value||new Date().toISOString().slice(0,10);
+  const desde=document.getElementById('filtroDesde').value;
+  const hasta=document.getElementById('filtroHasta').value;
+  if(desde&&hasta&&desde!==hasta){toast('La exportación detallada es solo para un día individual');return;}
+  const fechaFiltro=desde||hasta||new Date().toISOString().slice(0,10);
   const txt=generarTextoCierre(fechaFiltro);
   navigator.clipboard.writeText(txt).then(()=>toast('Resumen copiado ✓')).catch(()=>prompt('Copia este texto:',txt));
 }
@@ -1779,20 +1847,27 @@ function fmtKg(g){return(g/1000).toFixed(3)+' kg';}
 // ── INVENTARIO ──
 // Catálogo de ingredientes: auto=calculado desde ventas | manual=solo compras
 const INV_INGS=[
-  {key:'carne',   label:'Molida 80/20',    unidad:'kg',  auto:true, step:'0.001',defMin:30,    fmt:v=>v.toFixed(3)+' kg'},
-  {key:'pollo',   label:'Pollo',           unidad:'kg',  auto:true, step:'0.001',defMin:15,    fmt:v=>v.toFixed(3)+' kg'},
-  {key:'bollos',  label:'Pan brioche',     unidad:'pzas',auto:true, step:'1',    defMin:500,   fmt:v=>Math.round(v)+' pzas'},
-  {key:'papa',    label:'Papa frita',      unidad:'kg',  auto:true, step:'0.001',defMin:20,    fmt:v=>v.toFixed(3)+' kg'},
-  {key:'camote',  label:'Camote',          unidad:'kg',  auto:true, step:'0.001',defMin:5,     fmt:v=>v.toFixed(3)+' kg'},
-  {key:'tocino',  label:'Tocino',          unidad:'kg',  auto:true, step:'0.001',defMin:1,     fmt:v=>v.toFixed(3)+' kg'},
-  {key:'qamerica',label:'Q. Americano',    unidad:'pzas',auto:false,step:'1',    defMin:96,    fmt:v=>Math.round(v)+' reb'},
-  {key:'qsuizo',  label:'Q. Suizo',        unidad:'pzas',auto:false,step:'1',    defMin:144,   fmt:v=>Math.round(v)+' reb'},
+  {key:'carne',   label:'Molida 80/20',    unidad:'kg',  auto:true, step:'0.001',defMin:30,  cat:'cocina',fmt:v=>v.toFixed(3)+' kg'},
+  {key:'pollo',   label:'Pollo',           unidad:'kg',  auto:true, step:'0.001',defMin:15,  cat:'cocina',fmt:v=>v.toFixed(3)+' kg'},
+  {key:'bollos',  label:'Pan brioche',     unidad:'pzas',auto:true, step:'1',    defMin:500, cat:'cocina',fmt:v=>Math.round(v)+' pzas'},
+  {key:'papa',    label:'Papa frita',      unidad:'kg',  auto:true, step:'0.001',defMin:20,  cat:'cocina',fmt:v=>v.toFixed(3)+' kg'},
+  {key:'camote',  label:'Camote',          unidad:'kg',  auto:true, step:'0.001',defMin:5,   cat:'cocina',fmt:v=>v.toFixed(3)+' kg'},
+  {key:'tocino',  label:'Tocino',          unidad:'kg',  auto:true, step:'0.001',defMin:1,   cat:'cocina',fmt:v=>v.toFixed(3)+' kg'},
+  {key:'qamerica',label:'Q. Americano',    unidad:'pzas',auto:false,step:'1',    defMin:96,  cat:'cocina',fmt:v=>Math.round(v)+' reb'},
+  {key:'qsuizo',  label:'Q. Suizo',        unidad:'pzas',auto:false,step:'1',    defMin:144, cat:'cocina',fmt:v=>Math.round(v)+' reb'},
 ];
+function _fmtIng(i){
+  if(i.fmt)return i;
+  const f=i.unidad==='kg'?v=>v.toFixed(3)+' kg':v=>Math.round(v)+' '+i.unidad;
+  return{...i,fmt:f};
+}
+function _allIngs(){return[...INV_INGS,...(inventario.customIngs||[]).map(_fmtIng)];}
 const INV_PROVS_DEFAULT={carne:'Alma Alexis',pollo:'',bollos:'Pan',papa:'Oscar Caballero',camote:'',tocino:'',qamerica:'Kirkland',qsuizo:'Kirkland'};
 let inventario={
   v:3,diaInicio:null,
   stockInicial:{carne:0,pollo:0,bollos:0,papa:0,camote:0,tocino:0,qamerica:0,qsuizo:0},
   compras:[],
+  customIngs:[],
   minimos:{carne:0.500,pollo:0.240,bollos:8,papa:1.000,camote:0.500,tocino:0.100,qamerica:10,qsuizo:10},
   proveedores:{...INV_PROVS_DEFAULT}
 };
@@ -1809,6 +1884,12 @@ function cargarInventario(){
       });
       if(!inventario.proveedores)inventario.proveedores={...INV_PROVS_DEFAULT};
       else INV_INGS.forEach(i=>{if(!inventario.proveedores[i.key]&&INV_PROVS_DEFAULT[i.key])inventario.proveedores[i.key]=INV_PROVS_DEFAULT[i.key];});
+      if(!inventario.customIngs)inventario.customIngs=[];
+      inventario.customIngs.forEach(i=>{
+        if(inventario.stockInicial[i.key]===undefined)inventario.stockInicial[i.key]=0;
+        if(inventario.minimos[i.key]===undefined)inventario.minimos[i.key]=i.defMin||0;
+        if(!inventario.proveedores[i.key])inventario.proveedores[i.key]='';
+      });
     }
   }catch(e){}
 }
@@ -1822,21 +1903,52 @@ function toggleInvConfig(){
   const p=document.getElementById('invConfigPanel');
   const vis=p.style.display!=='none';
   p.style.display=vis?'none':'block';
-  if(!vis){
-    const fi=document.getElementById('invFechaInicio');if(fi)fi.value=_strDesdeTs(inventario.diaInicio);
-    INV_INGS.forEach(i=>{
-      const el=document.getElementById('invInit_'+i.key);if(el)el.value=inventario.stockInicial[i.key]||'';
-      const em=document.getElementById('invMin_'+i.key);if(em)em.value=inventario.minimos[i.key]||'';
-      const ep=document.getElementById('invProv_'+i.key);if(ep)ep.value=inventario.proveedores[i.key]||'';
+  if(!vis)renderInvConfigPanel();
+}
+function renderInvConfigPanel(){
+  const campo=(i,tipo,val)=>{
+    const ph=i.unidad==='kg'?'0.000':'0';
+    const lbl=tipo==='init'?`${i.label} (${i.unidad})`:tipo==='min'?`Mín. ${i.label}`:i.label;
+    return`<div><div style="font-size:11px;color:#888;margin-bottom:4px;">${lbl}</div>
+      <input type="${tipo==='prov'?'text':'number'}" id="invCfg${tipo}_${i.key}" ${tipo!=='prov'?`step="${i.step}" min="0" placeholder="${ph}"`:`placeholder="—"`}
+        value="${val||''}" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>`;
+  };
+  const ings=_allIngs();
+  const cocina=ings.filter(i=>i.cat==='cocina');
+  const custom=ings.filter(i=>i.cat!=='cocina');
+  const seccion=(titulo,lista,bg,border,color)=>`
+    <div style="background:${bg};border:1px solid ${border};border-radius:10px;padding:14px;margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:600;color:${color};text-transform:uppercase;margin-bottom:10px;">${titulo} — Stock inicial</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">${lista.map(i=>campo(i,'init',inventario.stockInicial[i.key])).join('')}</div>
+      <div style="font-size:11px;font-weight:600;color:${color};text-transform:uppercase;margin:10px 0 8px;">Mínimos para alerta</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">${lista.map(i=>campo(i,'min',inventario.minimos[i.key]||i.defMin)).join('')}</div>
+      <div style="font-size:11px;font-weight:600;color:${color};text-transform:uppercase;margin:10px 0 8px;">Proveedores</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">${lista.map(i=>campo(i,'prov',(inventario.proveedores||{})[i.key])).join('')}</div>
+    </div>`;
+  let html=`
+    <div style="background:#fff8ed;border:1px solid #e8a020;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px;">
+      <div style="flex:1;">
+        <div style="font-size:12px;font-weight:600;color:#b06800;margin-bottom:6px;">Fecha de inicio (Día 1) — retroactivo</div>
+        <input type="date" id="invFechaInicio" value="${_strDesdeTs(inventario.diaInicio)}" style="padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;background:#fff;" />
+      </div>
+      <div style="font-size:11px;color:#888;max-width:240px;">Todas las ventas desde esta fecha se contarán en el uso acumulado.</div>
+    </div>
+    ${seccion('Cocina',cocina,'#f0f4ff','#c8d8f0','#0D2A5E')}`;
+  if(custom.length){
+    const cats=[...new Set(custom.map(i=>i.cat))];
+    cats.forEach(c=>{
+      const list=custom.filter(i=>i.cat===c);
+      html+=seccion(c.charAt(0).toUpperCase()+c.slice(1),list,'#f0fff4','#b7e4c7','#2d7a2d');
     });
   }
+  document.getElementById('invConfigBody').innerHTML=html;
 }
 function guardarInvConfig(){
   const si={},mi={},pr={};
-  INV_INGS.forEach(i=>{
-    const eInit=document.getElementById('invInit_'+i.key);
-    const eMin=document.getElementById('invMin_'+i.key);
-    const eProv=document.getElementById('invProv_'+i.key);
+  _allIngs().forEach(i=>{
+    const eInit=document.getElementById('invCfginit_'+i.key);
+    const eMin=document.getElementById('invCfgmin_'+i.key);
+    const eProv=document.getElementById('invCfgprov_'+i.key);
     si[i.key]=i.unidad==='pzas'?parseInt(eInit&&eInit.value)||0:parseFloat(eInit&&eInit.value)||0;
     mi[i.key]=i.unidad==='pzas'?parseInt(eMin&&eMin.value)||i.defMin:parseFloat(eMin&&eMin.value)||i.defMin;
     pr[i.key]=(eProv&&eProv.value.trim())||'';
@@ -1851,7 +1963,7 @@ function guardarInvConfig(){
 }
 
 function _usoAcumulado(){
-  const base=()=>{const o={};INV_INGS.forEach(i=>o[i.key]=0);return o;};
+  const base=()=>{const o={};_allIngs().forEach(i=>o[i.key]=0);return o;};
   const empty={ventas:base(),cortesias:base(),cancelaciones:base()};
   if(!inventario.diaInicio)return empty;
   const vs=ventas.filter(v=>!v.excluida&&v.id>=inventario.diaInicio);
@@ -1868,27 +1980,58 @@ function _usoAcumulado(){
       qsuizo:(cfg.qsuizo||0)*it.q,
     };
     const target=it.cancelado?empty.cancelaciones:it.cortesia?empty.cortesias:empty.ventas;
-    INV_INGS.forEach(i=>{target[i.key]+=(vals[i.key]||0);});
+    _allIngs().forEach(i=>{target[i.key]+=(vals[i.key]||0);});
   }));
   return empty;
 }
 function _totalComprado(){
-  const t={};INV_INGS.forEach(i=>t[i.key]=0);
+  const t={};_allIngs().forEach(i=>t[i.key]=0);
   inventario.compras.forEach(c=>c.items.forEach(it=>{if(t[it.tipo]!==undefined)t[it.tipo]+=Number(it.cant);}));
   return t;
 }
 function _stockActual(){
   const desglose=_usoAcumulado(),comp=_totalComprado();
   // Uso real = ventas + cortesías (ambas consumen físicamente el producto)
-  const usoReal={};INV_INGS.forEach(i=>usoReal[i.key]=(desglose.ventas[i.key]||0)+(desglose.cortesias[i.key]||0));
+  const usoReal={};_allIngs().forEach(i=>usoReal[i.key]=(desglose.ventas[i.key]||0)+(desglose.cortesias[i.key]||0));
   const s={uso:usoReal,usoVentas:desglose.ventas,usoCortesias:desglose.cortesias,usoCancelaciones:desglose.cancelaciones,comp};
-  INV_INGS.forEach(i=>s[i.key]=(inventario.stockInicial[i.key]||0)+(comp[i.key]||0)-usoReal[i.key]);
+  _allIngs().forEach(i=>s[i.key]=(inventario.stockInicial[i.key]||0)+(comp[i.key]||0)-usoReal[i.key]);
   return s;
+}
+function toggleConteoPanel(){
+  const p=document.getElementById('invConteoPanel');
+  const vis=p.style.display!=='none';
+  p.style.display=vis?'none':'block';
+  if(!vis)renderInvConteoPanel();
+}
+function renderInvConteoPanel(){
+  const s=_stockActual();
+  const campo=i=>{
+    const ph=i.unidad==='kg'?'0.000':'0';
+    const cur=inventario.diaInicio?i.fmt(s[i.key]||0):'—';
+    return`<div>
+      <div style="font-size:11px;color:#555;margin-bottom:4px;">${i.label} (${i.unidad})</div>
+      <input type="number" id="invConteo_${i.key}" step="${i.step}" min="0" placeholder="${ph}"
+        style="width:100%;padding:8px 10px;border:1px solid #b7e4c7;border-radius:8px;font-size:14px;outline:none;background:#fff;" title="Sistema: ${cur}" />
+    </div>`;
+  };
+  const ings=_allIngs();
+  const cocina=ings.filter(i=>i.cat==='cocina');
+  const custom=ings.filter(i=>i.cat!=='cocina');
+  const cats=[...new Set(custom.map(i=>i.cat))];
+  let html=`
+    <div style="font-size:12px;font-weight:600;color:#2d7a2d;margin-bottom:6px;text-transform:uppercase;font-size:10px;letter-spacing:0.06em;">Cocina</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:${custom.length?'14':'0'}px;">${cocina.map(campo).join('')}</div>`;
+  cats.forEach(c=>{
+    const list=custom.filter(i=>i.cat===c);
+    html+=`<div style="font-size:10px;font-weight:600;color:#2d7a2d;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">${c.charAt(0).toUpperCase()+c.slice(1)}</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">${list.map(campo).join('')}</div>`;
+  });
+  document.getElementById('invConteoBody').innerHTML=html;
 }
 function aplicarStockActual(){
   // Toma el conteo físico de hoy y calcula el stockInicial retroactivo
   const hoy={};
-  INV_INGS.forEach(i=>{
+  _allIngs().forEach(i=>{
     const el=document.getElementById('invConteo_'+i.key);
     hoy[i.key]=i.unidad==='pzas'?parseInt(el&&el.value)||0:parseFloat(el&&el.value)||0;
   });
@@ -1898,9 +2041,9 @@ function aplicarStockActual(){
     inventario.diaInicio=ids.length?Math.min(...ids):new Date(_fechaHoy()+'T00:00:00').getTime();
   }
   const desglose=_usoAcumulado(),comp=_totalComprado();
-  const usoReal={};INV_INGS.forEach(i=>usoReal[i.key]=(desglose.ventas[i.key]||0)+(desglose.cortesias[i.key]||0));
+  const usoReal={};_allIngs().forEach(i=>usoReal[i.key]=(desglose.ventas[i.key]||0)+(desglose.cortesias[i.key]||0));
   // stockInicial = conteo_hoy + uso_acumulado - compras (para que stockActual = conteo_hoy)
-  INV_INGS.forEach(i=>{
+  _allIngs().forEach(i=>{
     inventario.stockInicial[i.key]=Math.max(0,hoy[i.key]+usoReal[i.key]-(comp[i.key]||0));
   });
   guardarInventario();
@@ -1921,9 +2064,21 @@ function switchInvTab(tab){
 
 function renderInvFormCompra(){
   const h=new Date(),hFmt=`${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,'0')}-${String(h.getDate()).padStart(2,'0')}`;
-  const grupoA=INV_INGS.filter(i=>i.auto),grupoM=INV_INGS.filter(i=>!i.auto);
   const campo=i=>`<div><div style="font-size:11px;color:#555;margin-bottom:4px;">${i.label} (${i.unidad})</div>
     <input type="number" id="invComp_${i.key}" step="${i.step}" min="0" placeholder="${i.unidad==='kg'?'0.000':'0'}" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>`;
+  const ings=_allIngs();
+  const cocina=ings.filter(i=>i.cat==='cocina');
+  const custom=ings.filter(i=>i.cat!=='cocina');
+  const cats=[...new Set(custom.map(i=>i.cat))];
+  let seccionesCustom='';
+  cats.forEach(c=>{
+    const list=custom.filter(i=>i.cat===c);
+    const titulo=c.charAt(0).toUpperCase()+c.slice(1);
+    seccionesCustom+=`<div style="background:#f0fff4;border:1px solid #b7e4c7;border-radius:10px;padding:14px;margin-bottom:10px;">
+      <div style="font-size:11px;color:#2d7a2d;font-weight:600;text-transform:uppercase;margin-bottom:10px;">${titulo}</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">${list.map(campo).join('')}</div>
+    </div>`;
+  });
   document.getElementById('invTabCompra').innerHTML=`
     <div style="max-width:560px;">
       <div style="font-size:13px;font-weight:600;margin-bottom:12px;">Registrar entrada de mercancía</div>
@@ -1934,13 +2089,12 @@ function renderInvFormCompra(){
           <input type="text" id="invCompProv" placeholder="Nombre del proveedor" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" /></div>
       </div>
       <div style="background:#f0f4ff;border:1px solid #c8d8f0;border-radius:10px;padding:14px;margin-bottom:10px;">
-        <div style="font-size:11px;color:#0D2A5E;font-weight:600;text-transform:uppercase;margin-bottom:10px;">Auto-calculados desde ventas</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">${grupoA.map(campo).join('')}</div>
+        <div style="font-size:11px;color:#0D2A5E;font-weight:600;text-transform:uppercase;margin-bottom:10px;">🍳 Cocina — Auto-calculados desde ventas</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">${cocina.filter(i=>i.auto).map(campo).join('')}</div>
+        ${cocina.some(i=>!i.auto)?`<div style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;margin:10px 0 8px;">Control manual</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">${cocina.filter(i=>!i.auto).map(campo).join('')}</div>`:''}
       </div>
-      <div style="background:#f9f9f9;border:1px solid #e8e8e8;border-radius:10px;padding:14px;margin-bottom:10px;">
-        <div style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:10px;">Control manual</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">${grupoM.map(campo).join('')}</div>
-      </div>
+      ${seccionesCustom}
       <div><div style="font-size:11px;color:#888;margin-bottom:4px;">Nota (opcional)</div>
         <input type="text" id="invCompNota" placeholder="Ej. Compra semanal lunes" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;margin-bottom:12px;" /></div>
       <button class="btn btn-dark btn-sm" onclick="confirmarCompra()" style="background:#2d7a2d;border-color:#2d7a2d;width:auto;padding:10px 24px;">✓ Registrar entrada</button>
@@ -1948,17 +2102,24 @@ function renderInvFormCompra(){
 }
 function confirmarCompra(){
   const items=[];
-  INV_INGS.forEach(i=>{
+  _allIngs().forEach(i=>{
     const el=document.getElementById('invComp_'+i.key);
     if(!el)return;
     const v=i.unidad==='pzas'?parseInt(el.value)||0:parseFloat(el.value)||0;
     if(v>0)items.push({tipo:i.key,cant:v,unidad:i.unidad});
   });
   if(!items.length){toast('⚠ Ingresa al menos una cantidad');return;}
+  const fecha=document.getElementById('invCompFecha').value;
+  const proveedor=document.getElementById('invCompProv').value.trim()||'Sin asignar';
+  const duplicado=inventario.compras.find(c=>c.fecha===fecha&&c.proveedor.toLowerCase()===proveedor.toLowerCase());
+  if(duplicado){
+    const ok=confirm(`⚠ Ya existe una entrada de "${proveedor}" el ${fecha}.\n\n¿Registrar de todas formas? (puede ser una segunda entrega del día)`);
+    if(!ok)return;
+  }
   inventario.compras.push({
     id:Date.now(),
-    fecha:document.getElementById('invCompFecha').value,
-    proveedor:document.getElementById('invCompProv').value.trim()||'Sin asignar',
+    fecha,
+    proveedor,
     nota:document.getElementById('invCompNota').value,
     items
   });
@@ -1970,36 +2131,85 @@ function eliminarCompra(id){
   guardarInventario();renderInventario();renderInvHistorial();toast('Entrada eliminada');
 }
 
+function abrirModalNuevoProductoInv(){
+  document.getElementById('modalNuevoProductoInv').classList.add('open');
+  document.getElementById('nuevoIngNombre').value='';
+  document.getElementById('nuevoIngMin').value='';
+  document.getElementById('nuevoIngProv').value='';
+  document.getElementById('nuevoIngCat').value='barra';
+  document.getElementById('nuevoIngUnidad').value='pzas';
+}
+function cerrarModalNuevoProductoInv(){
+  document.getElementById('modalNuevoProductoInv').classList.remove('open');
+}
+function guardarNuevoProductoInv(){
+  const nombre=document.getElementById('nuevoIngNombre').value.trim();
+  if(!nombre){toast('⚠ Ingresa el nombre del producto');return;}
+  const cat=document.getElementById('nuevoIngCat').value.trim().toLowerCase()||'barra';
+  const unidad=document.getElementById('nuevoIngUnidad').value||'pzas';
+  const defMin=unidad==='kg'?parseFloat(document.getElementById('nuevoIngMin').value)||0:parseInt(document.getElementById('nuevoIngMin').value)||0;
+  const prov=document.getElementById('nuevoIngProv').value.trim();
+  const key='custom_'+nombre.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'').substring(0,18)+'_'+Date.now().toString(36).slice(-4);
+  if(!inventario.customIngs)inventario.customIngs=[];
+  if(inventario.customIngs.find(i=>i.label.toLowerCase()===nombre.toLowerCase())){toast('⚠ Ya existe un producto con ese nombre');return;}
+  const step=unidad==='kg'?'0.001':'1';
+  inventario.customIngs.push({key,label:nombre,unidad,cat,step,defMin,auto:false});
+  inventario.stockInicial[key]=0;
+  inventario.minimos[key]=defMin;
+  if(!inventario.proveedores)inventario.proveedores={};
+  inventario.proveedores[key]=prov;
+  guardarInventario();
+  cerrarModalNuevoProductoInv();
+  renderInventario();
+  toast('✓ '+nombre+' dado de alta en '+cat);
+}
+function eliminarCustomIng(key){
+  if(!confirm('¿Eliminar este producto del inventario? Se perderá su historial de compras.'))return;
+  inventario.customIngs=(inventario.customIngs||[]).filter(i=>i.key!==key);
+  delete inventario.stockInicial[key];
+  delete inventario.minimos[key];
+  if(inventario.proveedores)delete inventario.proveedores[key];
+  guardarInventario();renderInventario();toast('Producto eliminado del inventario');
+}
+
 function renderInvHistorial(){
   const c=inventario.compras;
-  document.getElementById('invTabHistorial').innerHTML=c.length?`
+  // Detectar duplicados: misma fecha + mismo proveedor (ignorando mayúsculas)
+  const conteo={};
+  c.forEach(r=>{const k=(r.fecha||'')+'|'+(r.proveedor||'').toLowerCase();conteo[k]=(conteo[k]||0)+1;});
+  const esDup=r=>conteo[(r.fecha||'')+'|'+(r.proveedor||'').toLowerCase()]>1;
+  const numDups=Object.values(conteo).filter(v=>v>1).length;
+  document.getElementById('invTabHistorial').innerHTML=(numDups>0?`<div style="background:#fff8ed;border:1px solid #e8a020;border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+    <span style="font-size:18px;">⚠</span>
+    <div style="font-size:13px;color:#b06800;"><strong>${numDups} posible${numDups>1?'s duplicado':'s duplicado'}${numDups>1?'s':''}</strong> — mismo proveedor, misma fecha. Revisa y elimina si fue un registro doble.</div>
+  </div>`:'')+(c.length?`
     <div style="overflow-x:auto;">
     <table class="report-table" style="margin-bottom:0;min-width:700px;">
-      <thead><tr><th>Fecha</th><th>Proveedor</th>${INV_INGS.map(i=>`<th style="text-align:center;white-space:nowrap;">${i.label}</th>`).join('')}<th>Nota</th><th></th></tr></thead>
-      <tbody>${[...c].reverse().map(r=>`<tr>
-          <td style="white-space:nowrap;">${r.fecha||'—'}</td>
+      <thead><tr><th>Fecha</th><th>Proveedor</th>${_allIngs().map(i=>`<th style="text-align:center;white-space:nowrap;">${i.label}</th>`).join('')}<th>Nota</th><th></th></tr></thead>
+      <tbody>${[...c].reverse().map(r=>`<tr style="${esDup(r)?'background:#fff8ed;':''}" title="${esDup(r)?'⚠ Posible duplicado — mismo proveedor y fecha':''}">
+          <td style="white-space:nowrap;">${esDup(r)?'<span style="color:#b06800;font-weight:600;" title="Posible duplicado">⚠</span> ':''} ${r.fecha||'—'}</td>
           <td style="font-size:12px;white-space:nowrap;">${r.proveedor||'—'}</td>
-          ${INV_INGS.map(i=>{const it=r.items.find(x=>x.tipo===i.key);return`<td style="text-align:center;">${it?`<span style="color:#2d7a2d;font-weight:600;">+${i.unidad==='kg'?Number(it.cant).toFixed(3)+' kg':it.cant+' pzas'}</span>`:'—'}</td>`;}).join('')}
+          ${_allIngs().map(i=>{const it=r.items.find(x=>x.tipo===i.key);return`<td style="text-align:center;">${it?`<span style="color:#2d7a2d;font-weight:600;">+${i.unidad==='kg'?Number(it.cant).toFixed(3)+' kg':it.cant+' '+i.unidad}</span>`:'—'}</td>`;}).join('')}
           <td style="font-size:12px;color:#888;">${r.nota||''}</td>
           <td><button onclick="eliminarCompra(${r.id})" style="background:none;border:none;color:#e24b4a;cursor:pointer;font-size:13px;">✕</button></td>
         </tr>`).join('')}
       </tbody>
     </table></div>`
-    :'<div class="empty" style="padding:20px 0;">Sin compras registradas</div>';
+    :'<div class="empty" style="padding:20px 0;">Sin compras registradas</div>');
 }
 
 function renderInvOrden(){
   const s=_stockActual(),m=inventario.minimos,pr=inventario.proveedores||{};
   if(!inventario.diaInicio){document.getElementById('invTabOrden').innerHTML='<div class="empty" style="padding:20px 0;">Configura el inventario inicial primero</div>';return;}
   const grupos={};
-  INV_INGS.forEach(i=>{
+  _allIngs().forEach(i=>{
     const rec=m[i.key]*3-s[i.key];
     if(rec<=0)return;
     const prov=pr[i.key]||'Sin proveedor asignado';
     if(!grupos[prov])grupos[prov]=[];
     grupos[prov].push({
       ing:i.label,
-      cant:i.unidad==='kg'?rec.toFixed(3)+' kg':Math.ceil(rec)+' pzas',
+      cant:i.unidad==='kg'?rec.toFixed(3)+' kg':Math.ceil(rec)+' '+i.unidad,
       nota:'Stock: '+i.fmt(s[i.key]||0)+' · Mín: '+i.fmt(m[i.key]||i.defMin)
     });
   });
@@ -2026,7 +2236,7 @@ function renderInventario(){
   const s=_stockActual(),m=inventario.minimos;
   const sinConfig=!inventario.diaInicio;
   const estIng=i=>{if(sinConfig)return'sin-config';if((s[i.key]||0)<=m[i.key])return'alerta';if((s[i.key]||0)<=m[i.key]*1.5)return'aviso';return'ok';};
-  const estados=INV_INGS.map(i=>({i,est:estIng(i)}));
+  const estados=_allIngs().map(i=>({i,est:estIng(i)}));
   const hayAlerta=estados.some(e=>e.est==='alerta');
   document.getElementById('invAlertaBadge').style.display=hayAlerta?'inline':'none';
   const claseCard={alerta:'inv-alert',aviso:'inv-warn',ok:'inv-ok','sin-config':'inv-ok'};
@@ -2035,7 +2245,13 @@ function renderInventario(){
   const autoLabel='<span style="font-size:9px;background:#e8f0ff;color:#0D2A5E;border-radius:4px;padding:1px 5px;margin-left:5px;">AUTO</span>';
   const manualLabel='<span style="font-size:9px;background:#f0f0f0;color:#888;border-radius:4px;padding:1px 5px;margin-left:5px;">MANUAL</span>';
 
-  const cards=estados.map(({i,est})=>`
+  const catLabel={cocina:'🍳 Cocina',barra:'🍺 Barra'};
+  const renderCatCards=(cat)=>{
+    const grupo=estados.filter(({i})=>(i.cat||'cocina')===cat);
+    if(!grupo.length)return'';
+    const titulo=catLabel[cat]||(cat.charAt(0).toUpperCase()+cat.slice(1));
+    return`<div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.08em;margin:12px 0 6px;">${titulo}</div>`
+      +grupo.map(({i,est})=>`
     <div class="${claseCard[est]}">
       <div style="font-size:20px;">${iconoCard[est]}</div>
       <div style="flex:1;">
@@ -2048,8 +2264,13 @@ function renderInventario(){
         </div>
         ${est==='alerta'?`<div style="font-size:11px;color:#e24b4a;font-weight:600;margin-top:3px;">⚠ Debajo del mínimo — compra urgente</div>`:''}
         ${est==='aviso'?`<div style="font-size:11px;color:#b06800;font-weight:500;margin-top:3px;">Cerca del mínimo</div>`:''}
+        ${i.cat!=='cocina'?`<button onclick="eliminarCustomIng('${i.key}')" style="margin-top:6px;background:none;border:none;color:#e24b4a;cursor:pointer;font-size:11px;padding:0;">✕ Eliminar producto</button>`:''}
       </div>
     </div>`).join('');
+  };
+  const todasCats=[...new Set(estados.map(({i})=>i.cat||'cocina'))];
+  const catsOrden=['cocina','barra',...todasCats.filter(c=>c!=='cocina'&&c!=='barra')];
+  const cards=catsOrden.map(renderCatCards).join('');
 
   document.getElementById('invTabEstado').innerHTML=cards+(sinConfig?'':`
     <div style="margin-top:16px;overflow-x:auto;">
@@ -2062,7 +2283,7 @@ function renderInventario(){
           <th style="text-align:right;color:#888;">(Cancelac.)</th>
           <th style="text-align:right;">Stock actual</th><th style="text-align:right;">Mínimo</th>
         </tr></thead>
-        <tbody>${INV_INGS.map(i=>{
+        <tbody>${_allIngs().map(i=>{
           const est=estIng(i),val=s[i.key]||0,comp=s.comp[i.key]||0;
           const usoV=s.usoVentas[i.key]||0,usoC=s.usoCortesias[i.key]||0,usoK=s.usoCancelaciones[i.key]||0;
           const ini=inventario.stockInicial[i.key]||0,min=m[i.key]||i.defMin;
@@ -2081,6 +2302,98 @@ function renderInventario(){
       </table>
       <div style="font-size:11px;color:#aaa;margin-bottom:4px;">AUTO = desde ventas · Día 1: ${new Date(inventario.diaInicio).toLocaleDateString('es-MX')} · Cortesías descuentan stock · Cancelaciones en paréntesis = informativo, no descontado</div>
     </div>`);
+}
+
+// ── BÚSQUEDA GLOBAL ──
+function abrirBusqueda(){
+  document.getElementById('busqInput').value='';
+  document.getElementById('busqResultados').innerHTML='<div class="busq-hint">Escribe para buscar en todo el sistema<br><span style="font-size:11px;">Productos · Ingredientes · Compras · Ventas</span></div>';
+  document.getElementById('modalBusqueda').classList.add('open');
+  setTimeout(()=>document.getElementById('busqInput').focus(),80);
+}
+
+function ejecutarBusqueda(q){
+  const el=document.getElementById('busqResultados');
+  q=q.trim();
+  if(q.length<2){el.innerHTML='<div class="busq-hint">Escribe para buscar en todo el sistema<br><span style="font-size:11px;">Productos · Ingredientes · Compras · Ventas</span></div>';return;}
+  const ql=q.toLowerCase();
+  let html='';
+
+  // ── 1. Productos del menú ──
+  const prodRes=[];
+  Object.entries(MENU).forEach(([cat,items])=>items.forEach(it=>{if(it.n.toLowerCase().includes(ql))prodRes.push({cat,it});}));
+  EXTRAS.forEach(ex=>{if(ex.n.toLowerCase().includes(ql))prodRes.push({cat:'Extra/Topping',it:ex});});
+  if(prodRes.length){
+    html+=`<div class="busq-sec">Productos del menú (${prodRes.length})</div>`;
+    html+=prodRes.map(({cat,it})=>`<div class="busq-row">
+      <span class="busq-tag busq-tag-menu">${cat}</span>
+      <span class="busq-row-main">${resaltarQ(it.n,ql)}</span>
+      <span class="busq-row-right">$${it.p}</span>
+    </div>`).join('');
+  }
+
+  // ── 2. Ingredientes en inventario ──
+  const s=_stockActual(),m=inventario.minimos;
+  const ingRes=_allIngs().filter(i=>i.label.toLowerCase().includes(ql)||i.key.toLowerCase().includes(ql)||(inventario.proveedores[i.key]||'').toLowerCase().includes(ql));
+  if(ingRes.length){
+    html+=`<div class="busq-sec">Ingredientes (${ingRes.length})</div>`;
+    html+=ingRes.map(i=>{
+      const val=s[i.key]||0,min=m[i.key]||i.defMin;
+      const est=!inventario.diaInicio?'⚪':val<=min?'🔴':val<=min*1.5?'🟡':'🟢';
+      const prov=(inventario.proveedores[i.key]||'—');
+      return`<div class="busq-row">
+        <span class="busq-tag busq-tag-ing">${i.auto?'AUTO':'MANUAL'}</span>
+        <div style="flex:1;"><div class="busq-row-main">${est} ${resaltarQ(i.label,ql)}</div><div class="busq-row-sub">Proveedor: ${prov} · Mínimo: ${i.fmt(min)}</div></div>
+        <span class="busq-row-right">${inventario.diaInicio?i.fmt(val):'—'}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // ── 3. Historial de compras ──
+  const compRes=inventario.compras.filter(c=>{
+    const pMatch=(c.proveedor||'').toLowerCase().includes(ql);
+    const fMatch=(c.fecha||'').includes(ql);
+    const nMatch=(c.nota||'').toLowerCase().includes(ql);
+    const iMatch=c.items.some(it=>{const ing=_allIngs().find(x=>x.key===it.tipo);return ing&&ing.label.toLowerCase().includes(ql);});
+    return pMatch||fMatch||nMatch||iMatch;
+  });
+  if(compRes.length){
+    const mostrar=[...compRes].reverse().slice(0,8);
+    html+=`<div class="busq-sec">Compras${compRes.length>8?' (mostrando 8 más recientes)':' ('+compRes.length+')'}</div>`;
+    html+=mostrar.map(c=>{
+      const itemsStr=c.items.map(it=>{const ing=_allIngs().find(x=>x.key===it.tipo);return ing?`${ing.label}: ${ing.unidad==='kg'?Number(it.cant).toFixed(3)+' kg':it.cant+' '+ing.unidad}`:it.tipo;}).join(' · ');
+      return`<div class="busq-row">
+        <span class="busq-tag busq-tag-compra">Compra</span>
+        <div style="flex:1;"><div class="busq-row-main">${resaltarQ(c.proveedor||'Sin proveedor',ql)}</div><div class="busq-row-sub">${c.fecha||'—'}${c.nota?' · '+c.nota:''}</div><div class="busq-row-sub" style="margin-top:2px;">${itemsStr}</div></div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── 4. Ventas (por producto) ──
+  const ventaMap={};
+  ventas.forEach(v=>v.items.filter(it=>!it.cancelado&&it.n.toLowerCase().includes(ql)).forEach(it=>{
+    if(!ventaMap[it.n])ventaMap[it.n]={n:it.n,qty:0,total:0};
+    ventaMap[it.n].qty+=it.q;
+    ventaMap[it.n].total+=(it.cortesia?0:it.p*it.q);
+  }));
+  const ventaRes=Object.values(ventaMap).sort((a,b)=>b.qty-a.qty);
+  if(ventaRes.length){
+    html+=`<div class="busq-sec">Ventas históricas — "${q}" (${ventaRes.length} productos)</div>`;
+    html+=ventaRes.slice(0,8).map(v=>`<div class="busq-row">
+      <span class="busq-tag busq-tag-venta">Ventas</span>
+      <span class="busq-row-main">${resaltarQ(v.n,ql)}</span>
+      <span class="busq-row-sub">${v.qty} vendidos</span>
+      <span class="busq-row-right">$${v.total.toLocaleString()}</span>
+    </div>`).join('');
+  }
+
+  el.innerHTML=html||`<div class="busq-empty">Sin resultados para "<strong>${q}</strong>"</div>`;
+}
+
+function resaltarQ(txt,q){
+  const idx=txt.toLowerCase().indexOf(q);
+  if(idx<0)return txt;
+  return txt.slice(0,idx)+'<mark style="background:#fff3b0;border-radius:2px;padding:0 1px;">'+txt.slice(idx,idx+q.length)+'</mark>'+txt.slice(idx+q.length);
 }
 
 // ── ADMIN DASHBOARD ──
@@ -2474,6 +2787,100 @@ function renderAdmin(){
   } else {secEd.style.display='none';}
 }
 
+// ── EXPORTAR DASHBOARD GERENCIAL ──
+function exportarDashboard(){
+  const vFilt=getAdminVentas(),cFilt=getAdminCanc();
+
+  // Totales
+  const total=vFilt.reduce((s,v)=>s+v.total,0);
+  const propTotal=vFilt.reduce((s,v)=>s+(v.propina||0),0);
+  const cortTotal=vFilt.reduce((s,v)=>s+(v.cortesias||0),0);
+  const descTotal=vFilt.reduce((s,v)=>s+((v.descuento&&v.descuento.valor)||0),0);
+  const cancTotal=cFilt.reduce((s,c)=>s+c.valor,0);
+  const ticket=vFilt.length?Math.round(total/vFilt.length):0;
+
+  // Formas de pago
+  const metodos={};let mixtoEfT=0,mixtoTjT=0;
+  vFilt.forEach(v=>{
+    const base=v.pago.startsWith('Mixto')?'Mixto':v.pago;
+    if(!metodos[base])metodos[base]={comandas:0,venta:0,propinas:0};
+    metodos[base].comandas++;metodos[base].venta+=v.total;metodos[base].propinas+=(v.propina||0);
+    if(base==='Mixto'){
+      if(v.mixtoEf!==undefined){mixtoEfT+=v.mixtoEf;mixtoTjT+=v.mixtoTj;}
+      else{const m=v.pago.match(/\$([0-9,]+)\s*ef.*?\$([0-9,]+)\s*tj/);if(m){mixtoEfT+=parseFloat(m[1].replace(/,/g,''));mixtoTjT+=parseFloat(m[2].replace(/,/g,''));}}
+    }
+  });
+
+  // Por mesero
+  const xMes={};
+  vFilt.forEach(v=>{
+    if(!xMes[v.mesero])xMes[v.mesero]={comandas:0,venta:0,propinas:0,ticketPromedio:0};
+    xMes[v.mesero].comandas++;xMes[v.mesero].venta+=v.total;xMes[v.mesero].propinas+=(v.propina||0);
+  });
+  Object.keys(xMes).forEach(m=>{xMes[m].ticketPromedio=xMes[m].comandas?Math.round(xMes[m].venta/xMes[m].comandas):0;});
+
+  // Por producto
+  const prods={};
+  vFilt.forEach(v=>{
+    v.items.filter(it=>!it.cancelado&&!it.cortesia).forEach(it=>{
+      if(!prods[it.n])prods[it.n]={cantidad:0,venta:0,categoria:it.cat||''};
+      prods[it.n].cantidad+=it.q;prods[it.n].venta+=it.p*it.q;
+    });
+  });
+
+  // Por día
+  const dates=[];
+  const cur=new Date(adminRango.desde+'T12:00:00'),fin=new Date(adminRango.hasta+'T12:00:00');
+  while(cur<=fin){dates.push(new Date(cur));cur.setDate(cur.getDate()+1);}
+  const porDia=dates.map(d=>{
+    const fmt=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const vd=vFilt.filter(v=>{const vd2=new Date(v.id);return vd2.getFullYear()===d.getFullYear()&&vd2.getMonth()===d.getMonth()&&vd2.getDate()===d.getDate();});
+    const ef=vd.filter(v=>v.pago==='Efectivo'||v.pago.startsWith('Mixto')).reduce((s,v)=>s+(v.mixtoEf!==undefined?v.mixtoEf:v.pago==='Efectivo'?v.total:0),0);
+    const tj=vd.filter(v=>v.pago==='Tarjeta'||v.pago.startsWith('Mixto')).reduce((s,v)=>s+(v.mixtoTj!==undefined?v.mixtoTj:v.pago==='Tarjeta'?v.total:0),0);
+    const descDia=vd.reduce((s,v)=>s+((v.descuento&&v.descuento.valor)||0)+(v.cortesias||0),0);
+    const cancDia=cFilt.filter(c=>{const cd=new Date(c.id);return cd.getFullYear()===d.getFullYear()&&cd.getMonth()===d.getMonth()&&cd.getDate()===d.getDate();}).reduce((s,c)=>s+c.valor,0);
+    return{fecha:fmt,comandas:vd.length,venta:vd.reduce((s,v)=>s+v.total,0),propinas:vd.reduce((s,v)=>s+(v.propina||0),0),efectivo:ef,tarjeta:tj,descuentos:descDia,cancelaciones:cancDia};
+  });
+
+  const efTotal=(metodos['Efectivo']?.venta||0)+mixtoEfT;
+  const tjTotal=(metodos['Tarjeta']?.venta||0)+mixtoTjT;
+
+  const data={
+    tipo:'corte-ventas-instinto-pos',
+    version:'1.0',
+    restaurante:'INSTINTO',
+    periodo:{desde:adminRango.desde,hasta:adminRango.hasta},
+    generado:new Date().toISOString(),
+    resumen:{
+      totalVentas:total,
+      comandas:vFilt.length,
+      ticketPromedio:ticket,
+      efectivo:efTotal,
+      tarjeta:tjTotal,
+      propinas:propTotal,
+      descuentos:descTotal,
+      cortesias:cortTotal,
+      cancelaciones:cancTotal,
+    },
+    porFormaDePago:Object.entries(metodos).map(([m,d])=>({metodo:m,...d})).sort((a,b)=>b.venta-a.venta),
+    porMesero:Object.entries(xMes).map(([m,d])=>({mesero:m,...d})).sort((a,b)=>b.venta-a.venta),
+    porProducto:Object.entries(prods).map(([n,d])=>({producto:n,...d})).sort((a,b)=>b.cantidad-a.cantidad),
+    porDia,
+    cancelaciones:cFilt,
+    ventas:vFilt,
+  };
+
+  const fname=adminRango.desde===adminRango.hasta
+    ?`INSTINTO_ventas_${adminRango.desde}.json`
+    :`INSTINTO_ventas_${adminRango.desde}_al_${adminRango.hasta}.json`;
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=fname;a.click();
+  URL.revokeObjectURL(url);
+  toast(`Exportado ✓ — ${vFilt.length} ventas · $${total.toLocaleString()}`);
+}
+
 function iniciarCierre(){
   pedirPin('Cierre del día','Ingresa la contraseña de administrador para ejecutar el cierre.',ejecutarCierre);
 }
@@ -2489,7 +2896,8 @@ function ejecutarCierre(){
   URL.revokeObjectURL(url);
   toast('Cierre ejecutado — reporte descargado ✓');
   renderCierre();switchTab('reporte');
-  document.getElementById('filtroFecha').value=hoy;
+  document.getElementById('filtroDesde').value=hoy;
+  document.getElementById('filtroHasta').value=hoy;
   renderReporte();
 }
 
@@ -2526,7 +2934,7 @@ function switchTab(tab){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+tab).classList.add('active');
   if(tab==='abiertas')renderAbiertas();
-  if(tab==='reporte'){if(!document.getElementById('filtroFecha').value){const _h=new Date();document.getElementById('filtroFecha').value=`${_h.getFullYear()}-${String(_h.getMonth()+1).padStart(2,'0')}-${String(_h.getDate()).padStart(2,'0')}`;}renderMeseroSelect();renderReporte();}
+  if(tab==='reporte'){if(!document.getElementById('filtroDesde').value){const _h=new Date();const _hoy=`${_h.getFullYear()}-${String(_h.getMonth()+1).padStart(2,'0')}-${String(_h.getDate()).padStart(2,'0')}`;document.getElementById('filtroDesde').value=_hoy;document.getElementById('filtroHasta').value=_hoy;}renderMeseroSelect();renderReporte();}
   if(tab==='cierre')renderCierre();
   if(tab==='config')renderMeseroConfig();
   if(tab==='admin'){renderAdmin();renderInventario();}
