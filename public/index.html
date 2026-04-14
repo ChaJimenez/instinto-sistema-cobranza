@@ -419,6 +419,11 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
     <div id="adminEdits"></div>
   </div>
 
+  <div id="adminFoodCostCard" class="admin-card" style="border-top:3px solid #2d7a2d;display:none;">
+    <div class="admin-card-title">💰 Food cost por platillo</div>
+    <div id="adminFoodCost"></div>
+  </div>
+
   <div class="admin-card" style="border-top:3px solid #F5A020;">
     <div class="admin-card-title">🧪 Control de materia prima <span style="font-weight:400;color:#bbb;font-size:10px;margin-left:6px;">EXPERIMENTAL</span></div>
     <div id="adminMP"></div>
@@ -460,11 +465,13 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
         <button class="inv-tab" onclick="switchInvTab('compra')">+ Registrar compra</button>
         <button class="inv-tab" onclick="switchInvTab('historial')">Historial</button>
         <button class="inv-tab" onclick="switchInvTab('orden')">Orden de compra</button>
+        <button class="inv-tab" onclick="switchInvTab('merma')" style="color:#e24b4a;">⚠ Mermas</button>
       </div>
       <div id="invTabEstado"></div>
       <div id="invTabCompra" style="display:none;"></div>
       <div id="invTabHistorial" style="display:none;"></div>
       <div id="invTabOrden" style="display:none;"></div>
+      <div id="invTabMerma" style="display:none;"></div>
     </div>
   </div>
 </div>
@@ -1865,9 +1872,10 @@ function _fmtIng(i){
 function _allIngs(){return[...INV_INGS,...(inventario.customIngs||[]).map(_fmtIng)];}
 const INV_PROVS_DEFAULT={carne:'Alma Alexis',pollo:'',bollos:'Pan',papa:'Oscar Caballero',camote:'',tocino:'',qamerica:'Kirkland',qsuizo:'Kirkland'};
 let inventario={
-  v:3,diaInicio:null,
+  v:4,diaInicio:null,
   stockInicial:{carne:0,pollo:0,bollos:0,papa:0,camote:0,tocino:0,qamerica:0,qsuizo:0},
   compras:[],
+  mermas:[],
   customIngs:[],
   minimos:{carne:0.500,pollo:0.240,bollos:8,papa:1.000,camote:0.500,tocino:0.100,qamerica:10,qsuizo:10},
   proveedores:{...INV_PROVS_DEFAULT}
@@ -1886,6 +1894,7 @@ function cargarInventario(){
       if(!inventario.proveedores)inventario.proveedores={...INV_PROVS_DEFAULT};
       else INV_INGS.forEach(i=>{if(!inventario.proveedores[i.key]&&INV_PROVS_DEFAULT[i.key])inventario.proveedores[i.key]=INV_PROVS_DEFAULT[i.key];});
       if(!inventario.customIngs)inventario.customIngs=[];
+      if(!inventario.mermas)inventario.mermas=[];
       inventario.customIngs.forEach(i=>{
         if(inventario.stockInicial[i.key]===undefined)inventario.stockInicial[i.key]=0;
         if(inventario.minimos[i.key]===undefined)inventario.minimos[i.key]=i.defMin||0;
@@ -1990,11 +1999,30 @@ function _totalComprado(){
   inventario.compras.forEach(c=>c.items.forEach(it=>{if(t[it.tipo]!==undefined)t[it.tipo]+=Number(it.cant);}));
   return t;
 }
+function _totalMermas(){
+  const t={};_allIngs().forEach(i=>t[i.key]=0);
+  (inventario.mermas||[]).forEach(m=>{if(t[m.tipo]!==undefined)t[m.tipo]+=Number(m.cant);});
+  return t;
+}
+function _precioPromPonderado(){
+  // Precio promedio ponderado por insumo (desde compras con precio registrado)
+  const totCant={};const totGasto={};
+  _allIngs().forEach(i=>{totCant[i.key]=0;totGasto[i.key]=0;});
+  (inventario.compras||[]).forEach(c=>c.items.forEach(it=>{
+    if(it.precioUnit&&it.precioUnit>0&&totCant[it.tipo]!==undefined){
+      totCant[it.tipo]+=Number(it.cant);
+      totGasto[it.tipo]+=Number(it.cant)*Number(it.precioUnit);
+    }
+  }));
+  const r={};
+  _allIngs().forEach(i=>{r[i.key]=totCant[i.key]>0?totGasto[i.key]/totCant[i.key]:0;});
+  return r;
+}
 function _stockActual(){
-  const desglose=_usoAcumulado(),comp=_totalComprado();
-  // Uso real = ventas + cortesías (ambas consumen físicamente el producto)
-  const usoReal={};_allIngs().forEach(i=>usoReal[i.key]=(desglose.ventas[i.key]||0)+(desglose.cortesias[i.key]||0));
-  const s={uso:usoReal,usoVentas:desglose.ventas,usoCortesias:desglose.cortesias,usoCancelaciones:desglose.cancelaciones,comp};
+  const desglose=_usoAcumulado(),comp=_totalComprado(),merm=_totalMermas();
+  // Uso real = ventas + cortesías + mermas registradas (todo consume físicamente)
+  const usoReal={};_allIngs().forEach(i=>usoReal[i.key]=(desglose.ventas[i.key]||0)+(desglose.cortesias[i.key]||0)+(merm[i.key]||0));
+  const s={uso:usoReal,usoVentas:desglose.ventas,usoCortesias:desglose.cortesias,usoCancelaciones:desglose.cancelaciones,usoMermas:merm,comp};
   _allIngs().forEach(i=>s[i.key]=(inventario.stockInicial[i.key]||0)+(comp[i.key]||0)-usoReal[i.key]);
   return s;
 }
@@ -2054,19 +2082,31 @@ function aplicarStockActual(){
 }
 
 function switchInvTab(tab){
-  ['estado','compra','historial','orden'].forEach(t=>{
+  ['estado','compra','historial','orden','merma'].forEach(t=>{
     document.getElementById('invTab'+t.charAt(0).toUpperCase()+t.slice(1)).style.display=t===tab?'block':'none';
   });
-  document.querySelectorAll('.inv-tab').forEach((b,i)=>b.classList.toggle('active',['estado','compra','historial','orden'][i]===tab));
+  document.querySelectorAll('.inv-tab').forEach((b,i)=>b.classList.toggle('active',['estado','compra','historial','orden','merma'][i]===tab));
   if(tab==='compra')renderInvFormCompra();
   if(tab==='historial')renderInvHistorial();
   if(tab==='orden')renderInvOrden();
+  if(tab==='merma')renderInvMermas();
 }
 
 function renderInvFormCompra(){
   const h=new Date(),hFmt=`${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,'0')}-${String(h.getDate()).padStart(2,'0')}`;
-  const campo=i=>`<div><div style="font-size:11px;color:#555;margin-bottom:4px;">${i.label} (${i.unidad})</div>
-    <input type="number" id="invComp_${i.key}" step="${i.step}" min="0" placeholder="${i.unidad==='kg'?'0.000':'0'}" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" /></div>`;
+  const campo=i=>`<div style="grid-column:span 1;">
+    <div style="font-size:11px;color:#555;margin-bottom:4px;font-weight:600;">${i.label}</div>
+    <div style="display:flex;gap:4px;align-items:center;">
+      <div style="flex:1.2;">
+        <div style="font-size:10px;color:#aaa;margin-bottom:2px;">Cantidad (${i.unidad})</div>
+        <input type="number" id="invComp_${i.key}" step="${i.step}" min="0" placeholder="${i.unidad==='kg'?'0.000':'0'}" style="width:100%;padding:7px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;outline:none;" />
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:10px;color:#aaa;margin-bottom:2px;">$ por ${i.unidad==='kg'?'kg':'pza'}</div>
+        <input type="number" id="invCompPrecio_${i.key}" step="0.01" min="0" placeholder="0.00" style="width:100%;padding:7px 8px;border:1px solid #e8a020;border-radius:7px;font-size:13px;outline:none;background:#fffdf5;" />
+      </div>
+    </div>
+  </div>`;
   const ings=_allIngs();
   const cocina=ings.filter(i=>i.cat==='cocina');
   const custom=ings.filter(i=>i.cat!=='cocina');
@@ -2105,9 +2145,14 @@ function confirmarCompra(){
   const items=[];
   _allIngs().forEach(i=>{
     const el=document.getElementById('invComp_'+i.key);
+    const elP=document.getElementById('invCompPrecio_'+i.key);
     if(!el)return;
     const v=i.unidad==='pzas'?parseInt(el.value)||0:parseFloat(el.value)||0;
-    if(v>0)items.push({tipo:i.key,cant:v,unidad:i.unidad});
+    if(v>0){
+      const item={tipo:i.key,cant:v,unidad:i.unidad};
+      if(elP){const p=parseFloat(elP.value)||0;if(p>0)item.precioUnit=p;}
+      items.push(item);
+    }
   });
   if(!items.length){toast('⚠ Ingresa al menos una cantidad');return;}
   const fecha=document.getElementById('invCompFecha').value;
@@ -2186,14 +2231,17 @@ function renderInvHistorial(){
   </div>`:'')+(c.length?`
     <div style="overflow-x:auto;">
     <table class="report-table" style="margin-bottom:0;min-width:700px;">
-      <thead><tr><th>Fecha</th><th>Proveedor</th>${_allIngs().map(i=>`<th style="text-align:center;white-space:nowrap;">${i.label}</th>`).join('')}<th>Nota</th><th></th></tr></thead>
-      <tbody>${[...c].reverse().map(r=>`<tr style="${esDup(r)?'background:#fff8ed;':''}" title="${esDup(r)?'⚠ Posible duplicado — mismo proveedor y fecha':''}">
+      <thead><tr><th>Fecha</th><th>Proveedor</th>${_allIngs().map(i=>`<th style="text-align:center;white-space:nowrap;">${i.label}</th>`).join('')}<th style="text-align:right;">Costo total</th><th>Nota</th><th></th></tr></thead>
+      <tbody>${[...c].reverse().map(r=>{
+        const costoTotal=r.items.reduce((s,it)=>s+(it.precioUnit>0?Number(it.cant)*Number(it.precioUnit):0),0);
+        return`<tr style="${esDup(r)?'background:#fff8ed;':''}" title="${esDup(r)?'⚠ Posible duplicado — mismo proveedor y fecha':''}">
           <td style="white-space:nowrap;">${esDup(r)?'<span style="color:#b06800;font-weight:600;" title="Posible duplicado">⚠</span> ':''} ${r.fecha||'—'}</td>
           <td style="font-size:12px;white-space:nowrap;">${r.proveedor||'—'}</td>
-          ${_allIngs().map(i=>{const it=r.items.find(x=>x.tipo===i.key);return`<td style="text-align:center;">${it?`<span style="color:#2d7a2d;font-weight:600;">+${i.unidad==='kg'?Number(it.cant).toFixed(3)+' kg':it.cant+' '+i.unidad}</span>`:'—'}</td>`;}).join('')}
+          ${_allIngs().map(i=>{const it=r.items.find(x=>x.tipo===i.key);return`<td style="text-align:center;">${it?`<span style="color:#2d7a2d;font-weight:600;">+${i.unidad==='kg'?Number(it.cant).toFixed(3)+' kg':it.cant+' '+i.unidad}</span>${it.precioUnit>0?`<br><span style="font-size:10px;color:#b06800;">$${it.precioUnit.toFixed(2)}/${i.unidad==='kg'?'kg':'pza'}</span>`:''}` :'—'}</td>`;}).join('')}
+          <td style="text-align:right;font-weight:600;color:${costoTotal>0?'#0D2A5E':'#aaa'};">${costoTotal>0?'$'+costoTotal.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</td>
           <td style="font-size:12px;color:#888;">${r.nota||''}</td>
           <td><button onclick="eliminarCompra(${r.id})" style="background:none;border:none;color:#e24b4a;cursor:pointer;font-size:13px;">✕</button></td>
-        </tr>`).join('')}
+        </tr>`;}).join('')}
       </tbody>
     </table></div>`
     :'<div class="empty" style="padding:20px 0;">Sin compras registradas</div>');
@@ -2275,18 +2323,19 @@ function renderInventario(){
 
   document.getElementById('invTabEstado').innerHTML=cards+(sinConfig?'':`
     <div style="margin-top:16px;overflow-x:auto;">
-      <table class="report-table" style="margin-bottom:6px;min-width:780px;">
+      <table class="report-table" style="margin-bottom:6px;min-width:860px;">
         <thead><tr>
           <th>Ingrediente</th><th style="text-align:right;">Inicial</th>
           <th style="text-align:right;">+ Comprado</th>
           <th style="text-align:right;">− Ventas</th>
           <th style="text-align:right;color:#b06800;">− Cortesías</th>
+          <th style="text-align:right;color:#e24b4a;">− Mermas</th>
           <th style="text-align:right;color:#888;">(Cancelac.)</th>
           <th style="text-align:right;">Stock actual</th><th style="text-align:right;">Mínimo</th>
         </tr></thead>
         <tbody>${_allIngs().map(i=>{
           const est=estIng(i),val=s[i.key]||0,comp=s.comp[i.key]||0;
-          const usoV=s.usoVentas[i.key]||0,usoC=s.usoCortesias[i.key]||0,usoK=s.usoCancelaciones[i.key]||0;
+          const usoV=s.usoVentas[i.key]||0,usoC=s.usoCortesias[i.key]||0,usoK=s.usoCancelaciones[i.key]||0,usoM=(s.usoMermas||{})[i.key]||0;
           const ini=inventario.stockInicial[i.key]||0,min=m[i.key]||i.defMin;
           const col=est==='alerta'?'#e24b4a':est==='aviso'?'#b06800':'#0D2A5E';
           return`<tr>
@@ -2295,14 +2344,208 @@ function renderInventario(){
             <td style="text-align:right;color:#2d7a2d;">${comp>0?'+'+i.fmt(comp):'—'}</td>
             <td style="text-align:right;color:${usoV>0?'#e24b4a':'#aaa'};">${usoV>0?'−'+i.fmt(usoV):'—'}</td>
             <td style="text-align:right;color:${usoC>0?'#b06800':'#aaa'};">${usoC>0?'−'+i.fmt(usoC):'—'}</td>
+            <td style="text-align:right;color:${usoM>0?'#e24b4a':'#aaa'};">${usoM>0?'−'+i.fmt(usoM):'—'}</td>
             <td style="text-align:right;color:#aaa;font-size:11px;">${usoK>0?'('+i.fmt(usoK)+')':'—'}</td>
             <td style="text-align:right;font-weight:700;color:${col};">${i.fmt(val)}</td>
             <td style="text-align:right;color:#888;">${i.fmt(min)}</td>
           </tr>`;}).join('')}
         </tbody>
       </table>
-      <div style="font-size:11px;color:#aaa;margin-bottom:4px;">AUTO = desde ventas · Día 1: ${new Date(inventario.diaInicio).toLocaleDateString('es-MX')} · Cortesías descuentan stock · Cancelaciones en paréntesis = informativo, no descontado</div>
+      <div style="font-size:11px;color:#aaa;margin-bottom:4px;">AUTO = desde ventas · Día 1: ${new Date(inventario.diaInicio).toLocaleDateString('es-MX')} · Cortesías y mermas descuentan stock · Cancelaciones en paréntesis = informativo</div>
     </div>`);
+}
+
+// ── MERMAS ──
+function renderInvMermas(){
+  const mermas=inventario.mermas||[];
+  const total=mermas.reduce((s,m)=>{
+    const precios=_precioPromPonderado();
+    const p=precios[m.tipo]||0;
+    return s+(p>0?Number(m.cant)*p:0);
+  },0);
+  const razones=['Producto vencido','Error de preparación','Producto caído/roto','Sobra de turno','Temperatura incorrecta','Otro'];
+  const ings=_allIngs();
+  document.getElementById('invTabMerma').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+      <div style="background:#fff0f0;border:1px solid #f5b8b8;border-radius:10px;padding:14px;">
+        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Mermas registradas</div>
+        <div style="font-size:24px;font-weight:700;color:#e24b4a;">${mermas.length}</div>
+        <div style="font-size:12px;color:#aaa;">eventos desde el inicio</div>
+      </div>
+      <div style="background:#fff8ed;border:1px solid #e8a020;border-radius:10px;padding:14px;">
+        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Costo estimado de mermas</div>
+        <div style="font-size:24px;font-weight:700;color:#b06800;">${total>0?'$'+total.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</div>
+        <div style="font-size:12px;color:#aaa;">${total>0?'calculado con precio promedio de compras':'Registra precios en compras para ver costo'}</div>
+      </div>
+    </div>
+    <div style="background:#f9f9f9;border:1px solid #e8e8e8;border-radius:10px;padding:16px;margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:600;margin-bottom:12px;">Registrar nueva merma</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div>
+          <div style="font-size:11px;color:#888;margin-bottom:4px;">Fecha</div>
+          <input type="date" id="mermFecha" value="${_fechaHoy()}" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+        </div>
+        <div>
+          <div style="font-size:11px;color:#888;margin-bottom:4px;">Ingrediente</div>
+          <select id="mermTipo" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;background:#fff;">
+            ${ings.map(i=>`<option value="${i.key}">${i.label} (${i.unidad})</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <div style="font-size:11px;color:#888;margin-bottom:4px;">Cantidad</div>
+          <input type="number" id="mermCant" step="0.001" min="0" placeholder="0.000" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div>
+          <div style="font-size:11px;color:#888;margin-bottom:4px;">Razón</div>
+          <select id="mermRazon" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;background:#fff;">
+            ${razones.map(r=>`<option>${r}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <div style="font-size:11px;color:#888;margin-bottom:4px;">Nota (opcional)</div>
+          <input type="text" id="mermNota" placeholder="Detalles adicionales" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;" />
+        </div>
+      </div>
+      <button class="btn btn-sm" onclick="registrarMerma()" style="background:#e24b4a;color:#fff;border:none;padding:10px 24px;width:auto;">⚠ Registrar merma</button>
+    </div>
+    ${mermas.length?`<div style="overflow-x:auto;">
+      <table class="report-table" style="margin-bottom:0;">
+        <thead><tr><th>Fecha</th><th>Ingrediente</th><th style="text-align:right;">Cantidad</th><th>Razón</th><th>Nota</th><th></th></tr></thead>
+        <tbody>${[...mermas].reverse().map(m=>{
+          const ing=ings.find(i=>i.key===m.tipo);
+          return`<tr>
+            <td style="white-space:nowrap;">${m.fecha||'—'}</td>
+            <td style="font-weight:500;">${ing?ing.label:m.tipo}</td>
+            <td style="text-align:right;color:#e24b4a;font-weight:600;">${ing?ing.fmt(Number(m.cant)):m.cant+' '+m.unidad}</td>
+            <td style="font-size:12px;">${m.razon||'—'}</td>
+            <td style="font-size:12px;color:#888;">${m.nota||''}</td>
+            <td><button onclick="eliminarMerma(${m.id})" style="background:none;border:none;color:#e24b4a;cursor:pointer;font-size:13px;">✕</button></td>
+          </tr>`;}).join('')}
+        </tbody>
+      </table></div>`:'<div class="empty" style="padding:16px 0;">Sin mermas registradas</div>'}`;
+}
+function registrarMerma(){
+  const tipo=document.getElementById('mermTipo').value;
+  const cant=parseFloat(document.getElementById('mermCant').value)||0;
+  if(!tipo||cant<=0){toast('⚠ Selecciona ingrediente y cantidad');return;}
+  const ing=_allIngs().find(i=>i.key===tipo);
+  if(!inventario.mermas)inventario.mermas=[];
+  inventario.mermas.push({
+    id:Date.now(),
+    fecha:document.getElementById('mermFecha').value||_fechaHoy(),
+    tipo,cant,
+    unidad:ing?ing.unidad:'',
+    razon:document.getElementById('mermRazon').value,
+    nota:document.getElementById('mermNota').value.trim()
+  });
+  guardarInventario();
+  renderInventario();
+  renderInvMermas();
+  document.getElementById('mermCant').value='';
+  document.getElementById('mermNota').value='';
+  toast('Merma registrada — stock actualizado ✓');
+}
+function eliminarMerma(id){
+  if(!confirm('¿Eliminar este registro de merma?'))return;
+  inventario.mermas=(inventario.mermas||[]).filter(m=>m.id!==id);
+  guardarInventario();renderInventario();renderInvMermas();toast('Merma eliminada');
+}
+
+// ── FOOD COST ──
+function _calcFoodCost(vFilt){
+  // Calcula food cost por platillo y food cost % total del período
+  const precios=_precioPromPonderado();
+  const tienePrecio=Object.values(precios).some(v=>v>0);
+  if(!tienePrecio)return null;
+  const costosPorPlato={};
+  // Calculamos costo de insumos por plato usando MP config
+  Object.entries(MP).forEach(([nombre,cfg])=>{
+    let costo=0;
+    // carne: bolitas * 80g/1000 * precio_kg
+    if(cfg.carne&&precios.carne>0)costo+=cfg.carne*(80/1000)*precios.carne;
+    // pollo: piezas * 120g/1000 * precio_kg
+    if(cfg.pollo&&precios.pollo>0)costo+=cfg.pollo*(120/1000)*precios.pollo;
+    // bollo: piezas * precio_pza
+    if(cfg.bollo&&precios.bollos>0)costo+=cfg.bollo*precios.bollos;
+    // papa: gramos/1000 * precio_kg
+    if(cfg.papa&&precios.papa>0)costo+=cfg.papa*(1/1000)*precios.papa;
+    // camote: gramos/1000 * precio_kg
+    if(cfg.camote&&precios.camote>0)costo+=cfg.camote*(1/1000)*precios.camote;
+    // tocino: gramos/1000 * precio_kg
+    if(cfg.tocino&&precios.tocino>0)costo+=cfg.tocino*(1/1000)*precios.tocino;
+    // qamerica/qsuizo: piezas * precio_pza
+    if(cfg.qamerica&&precios.qamerica>0)costo+=cfg.qamerica*precios.qamerica;
+    if(cfg.qsuizo&&precios.qsuizo>0)costo+=cfg.qsuizo*precios.qsuizo;
+    costosPorPlato[nombre]=costo;
+  });
+  // Acumular por ventas del período
+  const resumen={};
+  vFilt.forEach(v=>v.items.filter(it=>!it.cancelado).forEach(it=>{
+    const costo=costosPorPlato[it.n];
+    if(costo===undefined||costo===0)return;
+    if(!resumen[it.n])resumen[it.n]={q:0,venta:0,costo:0,precio:it.p};
+    resumen[it.n].q+=it.q;
+    resumen[it.n].venta+=it.p*it.q;
+    resumen[it.n].costo+=costo*it.q;
+  }));
+  return{por_plato:resumen,precios_insumo:precios};
+}
+function renderAdminFoodCost(vFilt){
+  const card=document.getElementById('adminFoodCostCard');
+  const fc=_calcFoodCost(vFilt);
+  if(!fc){card.style.display='none';return;}
+  card.style.display='block';
+  const platos=Object.entries(fc.por_plato).sort((a,b)=>b[1].costo-a[1].costo);
+  if(!platos.length){document.getElementById('adminFoodCost').innerHTML='<div style="color:#aaa;font-size:13px;padding:8px 0;">Sin ventas de platillos con receta en el período</div>';return;}
+  const totalVenta=platos.reduce((s,[,d])=>s+d.venta,0);
+  const totalCosto=platos.reduce((s,[,d])=>s+d.costo,0);
+  const fcPct=totalVenta>0?totalCosto/totalVenta*100:0;
+  const fcColor=fcPct<=30?'#2d7a2d':fcPct<=38?'#b06800':'#e24b4a';
+  document.getElementById('adminFoodCost').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
+      <div style="background:#0D2A5E;color:#fff;border-radius:10px;padding:14px;text-align:center;">
+        <div style="font-size:10px;color:rgba(255,255,255,0.6);font-weight:600;text-transform:uppercase;margin-bottom:6px;">Food Cost %</div>
+        <div style="font-size:28px;font-weight:700;">${fcPct.toFixed(1)}%</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:4px;">${fcPct<=30?'Excelente ✓':fcPct<=38?'Aceptable':'Alto — revisar'}</div>
+      </div>
+      <div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px;text-align:center;">
+        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:6px;">Costo de insumos</div>
+        <div style="font-size:22px;font-weight:700;color:#e24b4a;">$${totalCosto.toLocaleString('es-MX',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
+        <div style="font-size:11px;color:#aaa;margin-top:4px;">del período seleccionado</div>
+      </div>
+      <div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px;text-align:center;">
+        <div style="font-size:10px;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:6px;">Margen bruto</div>
+        <div style="font-size:22px;font-weight:700;color:#2d7a2d;">$${(totalVenta-totalCosto).toLocaleString('es-MX',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
+        <div style="font-size:11px;color:#aaa;margin-top:4px;">${(100-fcPct).toFixed(1)}% de margen</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:#888;margin-bottom:10px;">Benchmark: Food cost ideal ≤ 30% · Aceptable ≤ 38% · Alerta &gt; 38%</div>
+    <table class="report-table" style="margin-bottom:6px;">
+      <thead><tr>
+        <th>Platillo</th>
+        <th style="text-align:center;">Vendidos</th>
+        <th style="text-align:right;">Precio venta</th>
+        <th style="text-align:right;">Costo insumos</th>
+        <th style="text-align:right;">FC %</th>
+        <th style="text-align:right;">Margen unit.</th>
+      </tr></thead>
+      <tbody>${platos.map(([nombre,d])=>{
+        const fc=d.venta>0?d.costo/d.venta*100:0;
+        const fcCol=fc<=30?'#2d7a2d':fc<=38?'#b06800':'#e24b4a';
+        const costoUnit=d.q>0?d.costo/d.q:0;
+        return`<tr>
+          <td style="font-weight:500;">${nombre}</td>
+          <td style="text-align:center;">${d.q}</td>
+          <td style="text-align:right;">$${d.precio.toLocaleString()}</td>
+          <td style="text-align:right;color:#e24b4a;">$${costoUnit.toFixed(2)}</td>
+          <td style="text-align:right;font-weight:700;color:${fcCol};">${fc.toFixed(1)}%</td>
+          <td style="text-align:right;font-weight:600;color:#2d7a2d;">$${(d.precio-costoUnit).toFixed(2)}</td>
+        </tr>`;}).join('')}
+      </tbody>
+    </table>
+    <div style="font-size:11px;color:#aaa;">Solo incluye insumos con precio registrado en compras. Registra precios en "+ Registrar compra" para mayor precisión.</div>`;
 }
 
 // ── BÚSQUEDA GLOBAL ──
@@ -2500,22 +2743,42 @@ function renderAdmin(){
   const rangoLabels={hoy:'Hoy',ayer:'Ayer','7d':'Últimos 7 días','30d':'Últimos 30 días'};
   document.getElementById('adminRangoLabel').textContent=rangoLabels[adminRango.tipo]||(adminRango.desde+' → '+adminRango.hasta);
 
+  // ── PERÍODO ANTERIOR (comparativo) ──
+  const d0=new Date(adminRango.desde+'T12:00:00'),d1=new Date(adminRango.hasta+'T12:00:00');
+  const diasPeriodo=Math.round((d1-d0)/(86400000))+1;
+  const prevHasta=new Date(d0);prevHasta.setDate(prevHasta.getDate()-1);
+  const prevDesde=new Date(prevHasta);prevDesde.setDate(prevDesde.getDate()-(diasPeriodo-1));
+  const fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const prevD=_adminDateMs(fmt(prevDesde)),prevH=_adminDateMs(fmt(prevHasta));
+  const vPrev=ventas.filter(v=>!v.excluida&&_ventaDateMs(v)>=prevD&&_ventaDateMs(v)<=prevH);
+  const prevTotal=vPrev.reduce((s,v)=>s+v.total,0);
+  const prevTicket=vPrev.length?Math.round(prevTotal/vPrev.length):0;
+  const prevProp=vPrev.reduce((s,v)=>s+(v.propina||0),0);
+  // Helper para delta visual
+  const delta=(cur,prev)=>{
+    if(!prev||prev===0)return'';
+    const pct=Math.round((cur-prev)/prev*100);
+    const col=pct>=0?'#2d7a2d':'#e24b4a';
+    const arrow=pct>=0?'▲':'▼';
+    return`<span style="font-size:10px;font-weight:600;color:${col};margin-left:5px;">${arrow}${Math.abs(pct)}% vs per. ant.</span>`;
+  };
+
   // ── KPIs ──
   document.getElementById('adminKpis').innerHTML=`<div class="admin-kpi-grid">
     <div class="admin-kpi admin-kpi-primary">
       <div class="akpi-label">Venta total${mAbiertas.length?' (incl. abiertas)':''}</div>
       <div class="akpi-val">$${granTotal.toLocaleString()}</div>
-      <div class="akpi-sub">${mAbiertas.length?`$${total.toLocaleString()} cobrado + $${abiertasT.toLocaleString()} abierto`:vFilt.length+' comanda'+(vFilt.length!==1?'s':'')}</div>
+      <div class="akpi-sub">${mAbiertas.length?`$${total.toLocaleString()} cobrado + $${abiertasT.toLocaleString()} abierto`:vFilt.length+' comanda'+(vFilt.length!==1?'s':'')}${delta(total,prevTotal)}</div>
     </div>
     <div class="admin-kpi">
       <div class="akpi-label">Ticket promedio</div>
       <div class="akpi-val">$${ticket.toLocaleString()}</div>
-      <div class="akpi-sub">${vFilt.length} comanda${vFilt.length!==1?'s':''} cerrada${vFilt.length!==1?'s':''}</div>
+      <div class="akpi-sub">${vFilt.length} comanda${vFilt.length!==1?'s':''} cerrada${vFilt.length!==1?'s':''}${delta(ticket,prevTicket)}</div>
     </div>
     <div class="admin-kpi admin-kpi-green">
       <div class="akpi-label">Propinas</div>
       <div class="akpi-val">$${propTotal.toLocaleString()}</div>
-      <div class="akpi-sub">${total>0?Math.round(propTotal/total*100):0}% de la venta</div>
+      <div class="akpi-sub">${total>0?Math.round(propTotal/total*100):0}% de la venta${delta(propTotal,prevProp)}</div>
     </div>
     <div class="admin-kpi">
       <div class="akpi-label">Efectivo</div>
@@ -2531,6 +2794,9 @@ function renderAdmin(){
     ${cortTotal>0?`<div class="admin-kpi admin-kpi-amber"><div class="akpi-label">Cortesías</div><div class="akpi-val">$${cortTotal.toLocaleString()}</div><div class="akpi-sub">Costo de casa</div></div>`:''}
     ${cancTotal>0?`<div class="admin-kpi admin-kpi-red"><div class="akpi-label">Cancelaciones</div><div class="akpi-val">$${cancTotal.toLocaleString()}</div><div class="akpi-sub">${cFilt.length} evento${cFilt.length!==1?'s':''}</div></div>`:''}
   </div>`;
+
+  // ── FOOD COST ──
+  renderAdminFoodCost(vFilt);
 
   // ── GRÁFICA ──
   if(isOneDay){
