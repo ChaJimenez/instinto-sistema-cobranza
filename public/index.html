@@ -3697,7 +3697,9 @@ function renderMeseroConfig(){
 function agregarMesero(){
   const inp=document.getElementById('nuevoMesero');const n=inp.value.trim();
   if(!n){toast('Escribe un nombre');return;}if(meseros.includes(n)){toast('Ya existe');return;}
-  meseros.push(n);guardar();inp.value='';renderMeseroConfig();renderMeseroSelect();toast(n+' agregado ✓');
+  pedirGerente('Agregar mesero',`Se requiere autorización para agregar a "${n}" al equipo.`,(gerente)=>{
+    meseros.push(n);guardar();inp.value='';renderMeseroConfig();renderMeseroSelect();toast(n+' agregado — autorizado por '+gerente+' ✓');
+  });
 }
 function eliminarComandaFantasma(id){
   const c=comandas.find(x=>String(x.id)===String(id));
@@ -3710,8 +3712,11 @@ function eliminarComandaFantasma(id){
   });
 }
 function eliminarMesero(i){
-  if(!confirm(`¿Quitar a ${meseros[i]}?`))return;
-  meseros.splice(i,1);guardar();renderMeseroConfig();renderMeseroSelect();
+  const nombre=meseros[i];
+  if(!confirm(`¿Quitar a ${nombre} del equipo?`))return;
+  pedirGerente('Quitar mesero',`Se requiere autorización para quitar a "${nombre}" del equipo.`,(gerente)=>{
+    meseros.splice(i,1);guardar();renderMeseroConfig();renderMeseroSelect();toast(nombre+' quitado — autorizado por '+gerente+' ✓');
+  });
 }
 
 // ── NAV ──
