@@ -171,9 +171,40 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
 .busq-row-right { font-size: 13px; font-weight: 600; color: #0D2A5E; white-space: nowrap; }
 .busq-empty { text-align: center; color: #aaa; font-size: 14px; padding: 32px 0; }
 .busq-hint { text-align: center; color: #bbb; font-size: 13px; padding: 28px 0; line-height: 1.8; }
+
+/* ── MAPA DE MESAS ── */
+.view-toggle { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; }
+.view-btn { padding: 7px 18px; border-radius: 20px; border: 1px solid #ddd; font-size: 13px; cursor: pointer; background: #fff; color: #555; transition: all 0.15s; font-weight: 500; }
+.view-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+.mapa-wrap { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 12px; }
+.mapa-card { border: 2px solid #e8e8e8; border-radius: 14px; padding: 16px 14px 12px; cursor: default; transition: transform 0.15s, box-shadow 0.15s; position: relative; background: #fff; }
+.mapa-card.v { border-color: #2d7a2d; background: #f4fbf4; }
+.mapa-card.a { border-color: #e8a020; background: #fffaf0; }
+.mapa-card.r { border-color: #e24b4a; background: #fff5f5; }
+.mapa-num { font-size: 20px; font-weight: 700; color: #1a1a1a; line-height: 1.2; margin-bottom: 3px; padding-right: 44px; }
+.mapa-mesero { font-size: 11px; color: #888; margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mapa-total { font-size: 18px; font-weight: 700; color: #1a1a1a; margin-bottom: 6px; }
+.mapa-cort { font-size: 10px; color: #b06800; margin-bottom: 8px; }
+.mapa-badge { position: absolute; top: 12px; right: 10px; font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 10px; }
+.mapa-badge.v { background: #e0f5e0; color: #2d7a2d; }
+.mapa-badge.a { background: #fff0d0; color: #b06800; }
+.mapa-badge.r { background: #ffe0e0; color: #e24b4a; }
+.mapa-actions { display: flex; gap: 6px; }
+.mapa-btn { flex: 1; padding: 7px 4px; border-radius: 8px; border: 1px solid #ddd; font-size: 11px; cursor: pointer; background: #fff; color: #555; font-weight: 500; white-space: nowrap; transition: all 0.12s; }
+.mapa-btn:hover { border-color: #1a1a1a; color: #1a1a1a; }
+.mapa-btn.cobrar { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+.mapa-btn.cobrar:hover { background: #333; }
+.mapa-nueva { border: 2px dashed #ddd; border-radius: 14px; padding: 20px 14px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; transition: all 0.15s; background: #fafafa; color: #bbb; min-height: 140px; }
+.mapa-nueva:hover { border-color: #1a1a1a; color: #1a1a1a; background: #fff; }
+
+/* ── OFFLINE ── */
+.offline-banner { display: none; background: #e24b4a; color: #fff; text-align: center; padding: 8px 16px; font-size: 13px; font-weight: 500; position: sticky; top: 0; z-index: 200; }
+.offline-banner.show { display: block; }
 </style>
 </head>
 <body>
+
+<div class="offline-banner" id="offlineBanner">Sin conexión — los datos se guardan localmente y sincronizarán al reconectar</div>
 
 <div class="header">
   <h1>INSTINTO <span class="sync-dot" id="syncDot"></span></h1>
@@ -265,7 +296,14 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
 </div>
 
 <!-- ABIERTAS -->
-<div id="screen-abiertas" class="screen"><div id="listaAbiertas"></div></div>
+<div id="screen-abiertas" class="screen">
+  <div class="view-toggle">
+    <button class="view-btn active" id="btnMapa" onclick="setViewMode('mapa')">Mapa</button>
+    <button class="view-btn" id="btnLista" onclick="setViewMode('lista')">Lista</button>
+    <span id="abiertasCount" style="font-size:13px;color:#aaa;margin-left:6px;"></span>
+  </div>
+  <div id="listaAbiertas"></div>
+</div>
 
 <!-- REPORTE -->
 <div id="screen-reporte" class="screen">
@@ -336,6 +374,24 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
     <button class="btn btn-dark btn-sm" onclick="agregarMesero()">Agregar</button>
   </div>
   <br><br>
+
+  <div class="sec">Gerentes autorizadores</div>
+  <p style="font-size:13px;color:#888;margin-bottom:14px;line-height:1.6;">Solo Paco, Tony u Omar pueden autorizar descuentos, cortesías y cancelaciones. Para agregar o cambiar PINs se requiere el PIN de administrador.</p>
+  <div id="gerentesList" style="margin-bottom:12px;"></div>
+  <div id="gerentesAgregarForm" style="display:none;background:#f5f5f3;border-radius:10px;padding:14px;margin-bottom:12px;">
+    <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Agregar gerente</div>
+    <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+      <input type="text" id="nuevoGerenteNombre" placeholder="Nombre completo" style="flex:1;min-width:120px;padding:9px 13px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;" />
+      <input type="password" id="nuevoGerentePin" placeholder="PIN (4+ dígitos)" style="width:140px;padding:9px 13px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;letter-spacing:0.15em;" />
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-dark btn-sm" onclick="confirmarAgregarGerente()">Agregar</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('gerentesAgregarForm').style.display='none'">Cancelar</button>
+    </div>
+  </div>
+  <button class="btn btn-outline btn-sm" onclick="iniciarAgregarGerente()" style="border-color:#0D2A5E;color:#0D2A5E;">+ Agregar gerente</button>
+  <br><br>
+
   <div class="sec">Respaldo de datos</div>
   <p style="font-size:13px;color:#888;margin-bottom:12px;">Exporta todos los datos para migración o respaldo. Importa el JSON del sistema anterior.</p>
   <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -558,11 +614,8 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
     <div id="modalDescDisplay" style="font-size:14px;color:#b06800;margin-bottom:10px;font-weight:500;"></div>
     <div id="modalAuthSection" style="display:none;">
       <div style="background:#fff8ed;border:1px solid #e8a020;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#b06800;">
-        ⚠ Esta cuenta tiene cortesías o cancelaciones. Se requiere autorización del administrador.
+        ⚠ Esta cuenta requiere autorización de gerente al confirmar cobro.
       </div>
-      <div class="sec">Contraseña de autorización</div>
-      <input type="password" id="modalPin" placeholder="Contraseña" style="width:100%;padding:10px 13px;border:1px solid #ddd;border-radius:8px;font-size:16px;outline:none;margin-bottom:8px;letter-spacing:0.15em;" onkeydown="if(event.key==='Enter')confirmarCobro()" />
-      <div id="modalPinError" class="pin-error"></div>
     </div>
     <button class="btn btn-dark" onclick="confirmarCobro()">✓ Confirmar cobro</button>
     <button class="btn btn-outline" onclick="imprimirCuentaPrevia()" style="border-color:#1a1a1a;color:#1a1a1a;">🖨 Imprimir cuenta (sin cobrar)</button>
@@ -625,6 +678,26 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
     <div id="pinError" class="pin-error"></div>
     <button class="btn btn-dark" onclick="submitPin()">Continuar</button>
     <button class="btn btn-outline" onclick="cerrarModal('modalPinGenerico')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL: autorización de gerente -->
+<div class="modal-bg" id="modalGerente">
+  <div class="modal" style="max-width:340px;text-align:center;">
+    <div style="font-size:36px;margin-bottom:8px;">🔐</div>
+    <h3 id="gerenteModalTitle">Autorización requerida</h3>
+    <p id="gerenteModalDesc" style="font-size:13px;color:#888;margin-bottom:20px;line-height:1.5;"></p>
+    <div style="text-align:left;">
+      <div class="sec">¿Quién autoriza?</div>
+      <select id="gerenteNombre" style="width:100%;padding:10px 13px;border:2px solid #ddd;border-radius:10px;font-size:15px;margin-bottom:12px;background:#fff;outline:none;color:#1a1a1a;" onfocus="this.style.borderColor='#0D2A5E'" onblur="this.style.borderColor='#ddd'">
+        <option value="">— Selecciona gerente —</option>
+      </select>
+      <div class="sec">PIN del gerente</div>
+      <input type="password" id="gerentePin" placeholder="••••" style="width:100%;padding:14px;border:2px solid #ddd;border-radius:10px;font-size:24px;text-align:center;letter-spacing:0.3em;outline:none;margin-bottom:8px;transition:border-color 0.2s;" onkeydown="if(event.key==='Enter')submitGerente()" onfocus="this.style.borderColor='#0D2A5E'" onblur="this.style.borderColor='#ddd'" />
+      <div id="gerenteError" class="pin-error"></div>
+    </div>
+    <button class="btn btn-dark" onclick="submitGerente()" style="background:#0D2A5E;margin-top:4px;">Autorizar</button>
+    <button class="btn btn-outline" onclick="cancelarGerente()">Cancelar</button>
   </div>
 </div>
 
@@ -711,6 +784,8 @@ const MP={
 // ── ESTADO EN MEMORIA ──
 let currentItems=[], currentPago="Efectivo", editandoId=null, currentPropina=0, currentMixtoEf=0, currentMixtoTj=0;
 let comandas=[], ventas=[], meseros=[], cancelaciones=[];
+let viewMode='mapa';
+let gerentesCache=[], gerenteCallback=null, gerenteCancelCallback=null;
 let modalPago="Efectivo", modalIdx=null, modalPropina=0, modalMixtoEf=0, modalMixtoTj=0;
 let pinCallback=null;
 let ultimaActualizacion=0;
@@ -902,6 +977,65 @@ async function submitPin(){
   }
 }
 
+// ── GERENTES AUTORIZADORES ──
+async function cargarGerentes(){
+  try{
+    const r=await fetch('/api/gerentes');
+    const d=await r.json();
+    gerentesCache=d.gerentes||[];
+  }catch(e){
+    gerentesCache=['Paco','Tony','Omar']; // fallback sin conexión
+  }
+  _actualizarSelectGerente();
+}
+
+function _actualizarSelectGerente(){
+  const sel=document.getElementById('gerenteNombre');
+  if(!sel)return;
+  const val=sel.value;
+  sel.innerHTML='<option value="">— Selecciona gerente —</option>'+
+    gerentesCache.map(n=>`<option value="${n}"${n===val?' selected':''}>${n}</option>`).join('');
+}
+
+function pedirGerente(titulo,desc,onSuccess,onCancel){
+  gerenteCallback=onSuccess;
+  gerenteCancelCallback=onCancel||null;
+  document.getElementById('gerenteModalTitle').textContent=titulo;
+  document.getElementById('gerenteModalDesc').textContent=desc;
+  document.getElementById('gerentePin').value='';
+  document.getElementById('gerenteError').textContent='';
+  _actualizarSelectGerente();
+  document.getElementById('modalGerente').classList.add('open');
+  setTimeout(()=>document.getElementById('gerenteNombre').focus(),100);
+}
+
+async function submitGerente(){
+  const nombre=document.getElementById('gerenteNombre').value;
+  const pin=document.getElementById('gerentePin').value;
+  if(!nombre){document.getElementById('gerenteError').textContent='Selecciona quién autoriza';return;}
+  if(!pin){document.getElementById('gerenteError').textContent='Ingresa el PIN';return;}
+  try{
+    const r=await fetch('/api/gerentes/validar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre,pin})});
+    const d=await r.json();
+    if(d.ok){
+      cerrarModal('modalGerente');
+      if(gerenteCallback){const cb=gerenteCallback;gerenteCallback=null;cb(nombre);}
+    }else{
+      document.getElementById('gerenteError').textContent='PIN incorrecto';
+      document.getElementById('gerentePin').value='';
+      document.getElementById('gerentePin').focus();
+    }
+  }catch(e){
+    document.getElementById('gerenteError').textContent='Error de conexión — reintenta';
+  }
+}
+
+function cancelarGerente(){
+  cerrarModal('modalGerente');
+  const cb=gerenteCancelCallback;gerenteCallback=null;gerenteCancelCallback=null;
+  if(cb)cb();
+}
+
 // ── MENU ──
 function initMenu(){
   const ct=document.getElementById('catTabs');
@@ -950,7 +1084,7 @@ function changeQty(idx,delta){
 function toggleCancelItem(idx){
   const it=currentItems[idx];
   if(!it.cancelado&&it.cortesia){
-    pedirPin('Autorización requerida','Se requiere contraseña para cancelar un ítem con cortesía.',()=>{it.cancelado=true;renderTicket();});
+    pedirGerente('Cancelar ítem con cortesía',`Se requiere autorización para cancelar "${it.n}" que tiene cortesía aplicada.`,()=>{it.cancelado=true;renderTicket();});
     return;
   }
   it.cancelado=!it.cancelado;
@@ -959,9 +1093,9 @@ function toggleCancelItem(idx){
 function toggleCortesia(idx){
   const it=currentItems[idx];
   if(!it.cortesia){
-    pedirPin('Autorización requerida','Se requiere contraseña para aplicar cortesía.',()=>{it.cortesia=true;renderTicket();});
+    pedirGerente('Aplicar cortesía',`Se requiere autorización de gerente para aplicar cortesía a "${it.n}".`,(gerente)=>{it.cortesia=true;it._authCortesia=gerente;renderTicket();});
   } else {
-    it.cortesia=false;renderTicket();
+    it.cortesia=false;delete it._authCortesia;renderTicket();
   }
 }
 function updateNota(idx,val){if(currentItems[idx])currentItems[idx].nota=val;}
@@ -1152,7 +1286,7 @@ async function enviarImpresion(comanda){
 }
 
 // ── VALIDAR / GUARDAR ──
-function tieneRestriccion(){return currentItems.some(it=>it.cortesia||it.cancelado);}
+function tieneRestriccion(){return currentItems.some(it=>it.cortesia||it.cancelado)||currentDescuento.tipo!==null;}
 function validar(){
   if(!document.getElementById('mesa').value.trim()){toast('⚠ Indica la mesa');return false;}
   if(!document.getElementById('meseroSel').value){toast('⚠ Selecciona un mesero');return false;}
@@ -1162,29 +1296,35 @@ function validar(){
 
 function saveComanda(){
   if(!validar())return;
-  const doSave=()=>{
+  const doSave=(gerente)=>{
     guardarCancelacionesItems();
-    const comanda=buildComanda('abierta');
+    const comanda={...buildComanda('abierta'),...(gerente?{autorizadoPor:gerente}:{})};
     comandas.push(comanda);
     editandoId=null;guardar();enviarImpresion(comanda);resetForm();toast('Comanda guardada ✓');switchTab('abiertas');
   };
-  if(tieneRestriccion()){pedirPin('Autorización requerida','Esta comanda tiene cortesías o cancelaciones.',doSave);}
-  else{doSave();}
+  if(tieneRestriccion()){
+    const motivo=[currentItems.some(it=>it.cortesia)?'cortesías':'',currentItems.some(it=>it.cancelado)?'cancelaciones':'',currentDescuento.tipo?'descuento':''].filter(Boolean).join(', ');
+    pedirGerente('Autorizar comanda',`Mesa con ${motivo} — requiere autorización de gerente.`,doSave);
+  }else{doSave(null);}
 }
 
 function cobrarComanda(){
   if(!validar())return;
   if(currentPago==='Mixto'&&Math.abs(currentMixtoEf+currentMixtoTj-totales().cobrable)>=1){toast('⚠ Efectivo + Tarjeta debe sumar $'+totales().cobrable.toLocaleString());return;}
-  const doCobrar=()=>{
+  const doCobrar=(gerente)=>{
     guardarCancelacionesItems();
     const pagoStr=currentPago==='Mixto'?`Mixto ($${currentMixtoEf.toLocaleString()} ef / $${currentMixtoTj.toLocaleString()} tj)`:currentPago;
-    const c={...buildComanda('cerrada'),pago:pagoStr,propina:currentPropina};
+    const descConAuth=currentDescuento.tipo?{...currentDescuento,autorizadoPor:gerente}:null;
+    const c={...buildComanda('cerrada'),pago:pagoStr,propina:currentPropina,...(gerente?{autorizadoPor:gerente}:{})};
+    if(descConAuth)c.descuento=descConAuth;
     ventas.push(c);editandoId=null;guardar();
     enviarRecibo(c);
     resetForm();toast('Venta registrada ✓');switchTab('reporte');
   };
-  if(tieneRestriccion()){pedirPin('Autorización requerida','Esta cuenta tiene cortesías o cancelaciones.',doCobrar);}
-  else{doCobrar();}
+  if(tieneRestriccion()){
+    const motivo=[currentItems.some(it=>it.cortesia)?'cortesías':'',currentItems.some(it=>it.cancelado)?'cancelaciones':'',currentDescuento.tipo?'descuento':''].filter(Boolean).join(', ');
+    pedirGerente('Autorizar cobro',`Cuenta con ${motivo} — requiere autorización de gerente.`,doCobrar);
+  }else{doCobrar(null);}
 }
 
 function buildComanda(estado){
@@ -1221,10 +1361,48 @@ function resetForm(){
 }
 
 // ── ABIERTAS ──
-function renderAbiertas(){
+function setViewMode(mode){
+  viewMode=mode;
+  document.getElementById('btnMapa').classList.toggle('active',mode==='mapa');
+  document.getElementById('btnLista').classList.toggle('active',mode==='lista');
+  renderAbiertas();
+}
+
+function renderMapaMesas(ab){
   const cont=document.getElementById('listaAbiertas');
+  const now=Date.now();
+  const nueva=`<div class="mapa-nueva" onclick="switchTab('nueva')"><div style="font-size:28px;font-weight:300;line-height:1;">+</div><div style="font-size:12px;font-weight:500;">Nueva comanda</div></div>`;
+  if(!ab.length){
+    cont.innerHTML=`<div class="mapa-wrap">${nueva}</div><div style="text-align:center;color:#bbb;font-size:13px;padding:28px 0 0;">No hay mesas abiertas</div>`;
+    return;
+  }
+  const cards=ab.map(c=>{
+    const mins=Math.floor((now-c.id)/60000);
+    const cls=mins<30?'v':mins<60?'a':'r';
+    const tiempo=mins<60?mins+'min':Math.floor(mins/60)+'h'+(mins%60>0?' '+mins%60+'m':'');
+    const cortTag=c.cortesias>0?`<div class="mapa-cort">★ Cortesía $${c.cortesias.toLocaleString()}</div>`:'';
+    return`<div class="mapa-card ${cls}">
+      <div class="mapa-badge ${cls}">${tiempo}</div>
+      <div class="mapa-num">Mesa ${c.mesa}</div>
+      <div class="mapa-mesero">${c.mesero}</div>
+      <div class="mapa-total">$${c.total.toLocaleString()}</div>
+      ${cortTag}
+      <div class="mapa-actions">
+        <button class="mapa-btn" onclick="editarComanda(${c.id})">✏ Editar</button>
+        <button class="mapa-btn cobrar" onclick="abrirCobro(${c.id})">Cobrar</button>
+      </div>
+    </div>`;
+  }).join('');
+  cont.innerHTML=`<div class="mapa-wrap">${cards}${nueva}</div>`;
+}
+
+function renderAbiertas(){
   const ab=comandas.filter(c=>c.estado==='abierta');
   document.getElementById('badgeN').textContent=ab.length?`(${ab.length})`:'';
+  const countEl=document.getElementById('abiertasCount');
+  if(countEl)countEl.textContent=ab.length?`${ab.length} mesa${ab.length!==1?'s':''} abierta${ab.length!==1?'s':''}` :'';
+  if(viewMode==='mapa'){renderMapaMesas(ab);return;}
+  const cont=document.getElementById('listaAbiertas');
   if(!ab.length){cont.innerHTML='<div class="empty">No hay comandas abiertas</div>';return;}
   cont.innerHTML=ab.map(c=>{
     const resumen=c.items.filter(it=>!it.cancelado).map(it=>{let s=`${it.q}× ${it.n}`;if(it.cortesia)s+=' ★';if(it.nota)s+=` (${it.nota})`;return s;}).join(' · ');
@@ -1266,9 +1444,11 @@ function editarComanda(id){
 
 function cancelarComandaCompleta(id){
   const c=comandas.find(x=>x.id===id);if(!c)return;
-  if(!confirm(`¿Cancelar TODA la mesa ${c.mesa}? Se registra pero NO se cobra.`))return;
-  cancelaciones.push({id:Date.now(),mesa:c.mesa,mesero:c.mesero,items:JSON.parse(JSON.stringify(c.items.filter(it=>!it.cancelado))),valor:c.total,hora:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),fecha:new Date().toLocaleDateString('es-MX'),tipo:'mesa_completa'});
-  comandas=comandas.filter(x=>x.id!==id);guardar();renderAbiertas();toast('Mesa cancelada — registrada en reporte ✓');
+  if(!confirm(`¿Cancelar TODA la mesa ${c.mesa}? Se registra pero NO se cobra.\nSe pedirá autorización de gerente.`))return;
+  pedirGerente('Cancelar mesa completa',`Mesa ${c.mesa} · ${c.mesero} · $${c.total.toLocaleString()} — autorización requerida.`,(gerente)=>{
+    cancelaciones.push({id:Date.now(),mesa:c.mesa,mesero:c.mesero,items:JSON.parse(JSON.stringify(c.items.filter(it=>!it.cancelado))),valor:c.total,hora:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),fecha:new Date().toLocaleDateString('es-MX'),tipo:'mesa_completa',autorizadoPor:gerente});
+    comandas=comandas.filter(x=>x.id!==id);guardar();renderAbiertas();toast(`Mesa ${c.mesa} cancelada — autorizado por ${gerente} ✓`);
+  });
 }
 
 // ── COBRO MODAL ──
@@ -1297,7 +1477,7 @@ function abrirCobro(id){
   document.getElementById('modalPropinaSection').style.display='none';
   document.getElementById('modalMixtoSection').style.display='none';
   document.getElementById('modalPin').value='';document.getElementById('modalPinError').textContent='';
-  const necesitaPin=c.cortesias>0||cancItems.length>0;
+  const necesitaPin=c.cortesias>0||cancItems.length>0||modalDescuento.tipo!==null;
   document.getElementById('modalAuthSection').style.display=necesitaPin?'block':'none';
   document.getElementById('modalCobrar').classList.add('open');
 }
@@ -1363,30 +1543,34 @@ function setPropinaModalCustom(val){
 function actualizarModalLines(){
   document.getElementById('modalLines').innerHTML=modalPropina>0?`<div class="ticket-line green"><span>🎁 Propina</span><span>$${modalPropina.toLocaleString()}</span></div>`:'';
 }
-async function confirmarCobro(){
+function confirmarCobro(){
   const idx=comandas.findIndex(x=>x.id===modalIdx);if(idx<0)return;
   const c=comandas[idx];
-  const necesitaPin=c.cortesias>0||c.items.some(it=>it.cancelado);
-  if(necesitaPin){
-    const pin=document.getElementById('modalPin').value;
-    try{
-      const r=await fetch('/api/validate-pin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin})});
-      const d=await r.json();
-      if(!d.ok){document.getElementById('modalPinError').textContent='Contraseña incorrecta';document.getElementById('modalPin').value='';return;}
-    }catch(e){document.getElementById('modalPinError').textContent='Error de conexión — reintenta';return;}
+  const cancItems=c.items.filter(it=>it.cancelado);
+  const necesitaAuth=c.cortesias>0||cancItems.length>0||modalDescuento.tipo!==null;
+  if(necesitaAuth){
+    const motivo=[c.cortesias>0?'cortesías':'',cancItems.length?'cancelaciones':'',modalDescuento.tipo?'descuento':''].filter(Boolean).join(', ');
+    pedirGerente('Autorizar cobro',`Mesa ${c.mesa} · ${c.mesero} — tiene ${motivo}.`,(gerente)=>_ejecutarCobro(gerente));
+    return;
   }
+  _ejecutarCobro(null);
+}
+
+function _ejecutarCobro(autorizadoPor){
+  const idx=comandas.findIndex(x=>x.id===modalIdx);if(idx<0)return;
+  const c=comandas[idx];
   const cancItems=c.items.filter(it=>it.cancelado&&!it._loggedCanc);
-  if(cancItems.length){cancelaciones.push({id:Date.now(),mesa:c.mesa,mesero:c.mesero,items:JSON.parse(JSON.stringify(cancItems)),valor:cancItems.reduce((s,it)=>s+it.p*it.q,0),hora:c.hora,fecha:c.fecha||new Date().toLocaleDateString('es-MX')});}
+  if(cancItems.length){cancelaciones.push({id:Date.now(),mesa:c.mesa,mesero:c.mesero,items:JSON.parse(JSON.stringify(cancItems)),valor:cancItems.reduce((s,it)=>s+it.p*it.q,0),hora:c.hora,fecha:c.fecha||new Date().toLocaleDateString('es-MX'),...(autorizadoPor?{autorizadoPor}:{})});}
   const pagoStrModal=modalPago==='Mixto'?`Mixto ($${modalMixtoEf.toLocaleString()} ef / $${modalMixtoTj.toLocaleString()} tj)`:modalPago;
   const {bruto,desc,cobrable}=calcDescModal(c);
-  const descObj=desc>0?{tipo:modalDescuento.tipo,pct:modalDescuento.pct,valor:desc}:null;
-  const venta={...c,total:cobrable,subtotal:bruto,descuento:descObj,pago:pagoStrModal,propina:modalPropina,estado:'cerrada',...(modalPago==='Mixto'?{mixtoEf:modalMixtoEf,mixtoTj:modalMixtoTj}:{})};
+  const descObj=desc>0?{tipo:modalDescuento.tipo,pct:modalDescuento.pct,valor:desc,...(autorizadoPor?{autorizadoPor}:{})}:null;
+  const venta={...c,total:cobrable,subtotal:bruto,descuento:descObj,pago:pagoStrModal,propina:modalPropina,estado:'cerrada',...(modalPago==='Mixto'?{mixtoEf:modalMixtoEf,mixtoTj:modalMixtoTj}:{}),...(autorizadoPor?{autorizadoPor}:{})};
   const yaExiste=ventas.some(v=>v.id===venta.id);
-  if(!yaExiste) ventas.push(venta);
+  if(!yaExiste)ventas.push(venta);
   else console.warn('⚠ Venta duplicada bloqueada para mesa',c.mesa,'id',venta.id);
   comandas.splice(idx,1);
   guardar();if(!yaExiste)enviarRecibo(venta);
-  cerrarModal('modalCobrar');renderAbiertas();toast('Cobrado ✓');
+  cerrarModal('modalCobrar');renderAbiertas();toast(`Cobrado ✓${autorizadoPor?' — autorizado por '+autorizadoPor:''}`);
 }
 function cerrarModal(id){document.getElementById(id).classList.remove('open');}
 
@@ -3421,6 +3605,89 @@ function ejecutarCierre(){
   renderReporte();
 }
 
+// ── GERENTES CONFIG ──
+let _gerentesEditando = []; // copia local mientras se edita
+
+async function renderGerenteConfig(){
+  try{
+    const r=await fetch('/api/gerentes');
+    const d=await r.json();
+    gerentesCache=d.gerentes||[];
+    _actualizarSelectGerente();
+  }catch(e){}
+  const lista=document.getElementById('gerentesList');if(!lista)return;
+  if(!gerentesCache.length){lista.innerHTML='<div style="font-size:13px;color:#aaa;padding:8px 0;">Sin gerentes configurados — agrega al menos uno.</div>';return;}
+  lista.innerHTML=gerentesCache.map((n,i)=>`
+    <div class="mesero-item">
+      <div>
+        <span style="font-size:15px;font-weight:500;">🔐 ${n}</span>
+        <span style="font-size:11px;color:#aaa;margin-left:8px;">PIN protegido</span>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-outline btn-sm" onclick="iniciarCambiarPin(${i})" style="font-size:11px;">Cambiar PIN</button>
+        <button class="btn btn-danger btn-sm" onclick="eliminarGerente(${i})" style="font-size:11px;">Quitar</button>
+      </div>
+    </div>`).join('');
+}
+
+function iniciarAgregarGerente(){
+  pedirPin('PIN de administrador','Se requiere PIN de administrador para gestionar gerentes.',()=>{
+    document.getElementById('gerentesAgregarForm').style.display='block';
+    document.getElementById('nuevoGerenteNombre').focus();
+  });
+}
+
+async function confirmarAgregarGerente(){
+  const nombre=document.getElementById('nuevoGerenteNombre').value.trim();
+  const pin=document.getElementById('nuevoGerentePin').value;
+  if(!nombre){toast('⚠ Ingresa el nombre del gerente');return;}
+  if(pin.length<4){toast('⚠ El PIN debe tener al menos 4 dígitos');return;}
+  if(gerentesCache.includes(nombre)){toast('⚠ Ya existe un gerente con ese nombre');return;}
+  // Cargar lista completa con PINs para guardar
+  pedirPin('Confirmar con PIN admin','Para agregar gerente se requiere PIN de administrador.',async()=>{
+    const adminPin=prompt('PIN de administrador:');if(!adminPin)return;
+    const rGet=await fetch('/api/gerentes').catch(()=>null);
+    const actualFull=rGet?await rGet.json().catch(()=>({})):{};
+    // Los PINs no los devuelve el GET, hay que manejar localmente con la llamada de guardar
+    const nuevaLista=[...gerentesCache.map(n=>({nombre:n,pin:'___keep___'})),{nombre,pin}];
+    const r=await fetch('/api/gerentes/guardar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin_admin:adminPin,gerentes:nuevaLista})});
+    const d=await r.json();
+    if(d.ok){
+      toast(`${nombre} agregado como gerente ✓`);
+      document.getElementById('gerentesAgregarForm').style.display='none';
+      document.getElementById('nuevoGerenteNombre').value='';
+      document.getElementById('nuevoGerentePin').value='';
+      await renderGerenteConfig();
+    }else{toast('⚠ Error: '+(d.error||'PIN admin incorrecto'));}
+  });
+}
+
+function iniciarCambiarPin(idx){
+  const nombre=gerentesCache[idx];
+  const nuevoPin=prompt(`Nuevo PIN para ${nombre} (mín. 4 dígitos):`);
+  if(!nuevoPin||nuevoPin.length<4){if(nuevoPin!==null)toast('⚠ PIN muy corto');return;}
+  const adminPin=prompt('PIN de administrador para confirmar:');if(!adminPin)return;
+  // Para cambiar PIN necesitamos la lista completa; enviamos ___keep___ para los que no cambian
+  const gerentes=gerentesCache.map((n,i)=>({nombre:n,pin:i===idx?nuevoPin:'___keep___'}));
+  fetch('/api/gerentes/guardar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin_admin:adminPin,gerentes})})
+    .then(r=>r.json()).then(d=>{
+      if(d.ok)toast(`PIN de ${nombre} actualizado ✓`);
+      else toast('⚠ PIN de administrador incorrecto');
+    }).catch(()=>toast('⚠ Error de conexión'));
+}
+
+function eliminarGerente(idx){
+  const nombre=gerentesCache[idx];
+  if(!confirm(`¿Quitar a ${nombre} como gerente autorizado?`))return;
+  const adminPin=prompt('PIN de administrador para confirmar:');if(!adminPin)return;
+  const gerentes=gerentesCache.filter((_,i)=>i!==idx).map(n=>({nombre:n,pin:'___keep___'}));
+  fetch('/api/gerentes/guardar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin_admin:adminPin,gerentes})})
+    .then(r=>r.json()).then(d=>{
+      if(d.ok){toast(`${nombre} removido ✓`);renderGerenteConfig();}
+      else toast('⚠ PIN de administrador incorrecto');
+    }).catch(()=>toast('⚠ Error de conexión'));
+}
+
 // ── CONFIG ──
 function renderMeseroConfig(){
   document.getElementById('meserosList').innerHTML=meseros.length
@@ -3456,14 +3723,33 @@ function switchTab(tab){
   if(tab==='abiertas')renderAbiertas();
   if(tab==='reporte'){if(!document.getElementById('filtroDesde').value){const _h=new Date();const _hoy=`${_h.getFullYear()}-${String(_h.getMonth()+1).padStart(2,'0')}-${String(_h.getDate()).padStart(2,'0')}`;document.getElementById('filtroDesde').value=_hoy;document.getElementById('filtroHasta').value=_hoy;}renderMeseroSelect();renderReporte();}
   if(tab==='cierre')renderCierre();
-  if(tab==='config')renderMeseroConfig();
+  if(tab==='config'){renderMeseroConfig();renderGerenteConfig();}
   if(tab==='admin'){renderAdmin();renderInventario();}
 }
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
 
+// ── OFFLINE ──
+function setOffline(isOffline){
+  document.getElementById('offlineBanner').classList.toggle('show',isOffline);
+  setSyncDot(!isOffline);
+}
+window.addEventListener('offline',()=>setOffline(true));
+window.addEventListener('online',()=>{
+  setOffline(false);
+  // Auto-sync: subir datos locales que quedaron pendientes
+  guardar().then(()=>cargarDatos(true).then(()=>{renderAbiertas();renderMeseroSelect();})).catch(()=>{});
+});
+if(!navigator.onLine)setOffline(true);
+
+// ── SERVICE WORKER ──
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').catch(e=>console.warn('SW no registrado:',e));
+}
+
 // ── INIT ──
 document.getElementById('fechaHoy').textContent=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
 cargarInventario();
+cargarGerentes();
 initMenu();renderTicket();
 cargarDatos().then(()=>{renderMeseroSelect();renderAbiertas();});
 </script>

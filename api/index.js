@@ -148,6 +148,47 @@ app.post('/api/validate-pin', async (req, res) => {
   else res.status(401).json({ ok: false });
 });
 
+// ── Gerentes autorizadores ──
+const GERENTES_KEY = 'i:gerentes';
+
+// Nombres de gerentes (sin PINs)
+app.get('/api/gerentes', async (req, res) => {
+  try {
+    const lista = await kv.get(GERENTES_KEY) || [];
+    res.json({ gerentes: lista.map(x => x.nombre) });
+  } catch(e) { res.json({ gerentes: [] }); }
+});
+
+// Validar PIN de un gerente específico
+app.post('/api/gerentes/validar', async (req, res) => {
+  try {
+    const { nombre, pin } = req.body || {};
+    if (!nombre || !pin) return res.json({ ok: false });
+    const lista = await kv.get(GERENTES_KEY) || [];
+    const ok = lista.some(x => x.nombre === nombre && x.pin === String(pin));
+    res.json({ ok });
+  } catch(e) { res.status(500).json({ ok: false }); }
+});
+
+// Guardar lista de gerentes (requiere PIN admin)
+// Si un gerente tiene pin '___keep___', se preserva el PIN existente de Redis
+app.post('/api/gerentes/guardar', async (req, res) => {
+  try {
+    const { pin_admin, gerentes } = req.body || {};
+    if (pin_admin !== PIN) return res.status(401).json({ error: 'PIN incorrecto' });
+    if (!Array.isArray(gerentes)) return res.status(400).json({ error: 'Formato inválido' });
+    const existentes = await kv.get(GERENTES_KEY) || [];
+    const pinMap = {};
+    existentes.forEach(g => { pinMap[g.nombre] = g.pin; });
+    const nuevaLista = gerentes.map(g => ({
+      nombre: g.nombre,
+      pin: g.pin === '___keep___' ? (pinMap[g.nombre] || '') : String(g.pin)
+    }));
+    await kv.set(GERENTES_KEY, nuevaLista);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/health', (req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
 module.exports = app;
