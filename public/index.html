@@ -176,26 +176,33 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
 .view-toggle { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; }
 .view-btn { padding: 7px 18px; border-radius: 20px; border: 1px solid #ddd; font-size: 13px; cursor: pointer; background: #fff; color: #555; transition: all 0.15s; font-weight: 500; }
 .view-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
-.mapa-wrap { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 12px; }
-.mapa-card { border: 2px solid #e8e8e8; border-radius: 14px; padding: 16px 14px 12px; cursor: default; transition: transform 0.15s, box-shadow 0.15s; position: relative; background: #fff; }
-.mapa-card.v { border-color: #2d7a2d; background: #f4fbf4; }
-.mapa-card.a { border-color: #e8a020; background: #fffaf0; }
-.mapa-card.r { border-color: #e24b4a; background: #fff5f5; }
-.mapa-num { font-size: 20px; font-weight: 700; color: #1a1a1a; line-height: 1.2; margin-bottom: 3px; padding-right: 44px; }
-.mapa-mesero { font-size: 11px; color: #888; margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mapa-total { font-size: 18px; font-weight: 700; color: #1a1a1a; margin-bottom: 6px; }
-.mapa-cort { font-size: 10px; color: #b06800; margin-bottom: 8px; }
-.mapa-badge { position: absolute; top: 12px; right: 10px; font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 10px; }
-.mapa-badge.v { background: #e0f5e0; color: #2d7a2d; }
-.mapa-badge.a { background: #fff0d0; color: #b06800; }
-.mapa-badge.r { background: #ffe0e0; color: #e24b4a; }
-.mapa-actions { display: flex; gap: 6px; }
-.mapa-btn { flex: 1; padding: 7px 4px; border-radius: 8px; border: 1px solid #ddd; font-size: 11px; cursor: pointer; background: #fff; color: #555; font-weight: 500; white-space: nowrap; transition: all 0.12s; }
-.mapa-btn:hover { border-color: #1a1a1a; color: #1a1a1a; }
-.mapa-btn.cobrar { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
-.mapa-btn.cobrar:hover { background: #333; }
-.mapa-nueva { border: 2px dashed #ddd; border-radius: 14px; padding: 20px 14px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; transition: all 0.15s; background: #fafafa; color: #bbb; min-height: 140px; }
-.mapa-nueva:hover { border-color: #1a1a1a; color: #1a1a1a; background: #fff; }
+.mapa-wrap { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 6px; padding: 4px 0; }
+/* Mesa círculo — estilo Toteat */
+.mapa-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px 8px; cursor: pointer; border-radius: 10px; border: none; background: transparent; transition: background 0.12s; user-select: none; }
+.mapa-card:hover { background: rgba(0,0,0,0.04); }
+.mapa-icon { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0; }
+.mapa-icon.libre { background: #d4d4d4; }
+.mapa-icon.ocupada { background: #e24b4a; }
+.mapa-icon.demorada { background: #c0392b; }
+/* SVG cubiertos para libre */
+.mapa-icon.libre svg { opacity: 0.55; }
+/* X para ocupada */
+.mapa-icon.ocupada::before,.mapa-icon.ocupada::after,
+.mapa-icon.demorada::before,.mapa-icon.demorada::after {
+  content:''; position:absolute; width:3px; height:26px; background:#fff; border-radius:2px;
+}
+.mapa-icon.ocupada::before,.mapa-icon.demorada::before { transform:rotate(45deg); }
+.mapa-icon.ocupada::after,.mapa-icon.demorada::after  { transform:rotate(-45deg); }
+.mapa-num { font-size: 13px; font-weight: 700; color: #1a1a1a; text-align: center; line-height: 1.2; }
+.mapa-mesero { font-size: 11px; color: #666; text-align: center; font-style: italic; line-height: 1.2; max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mapa-tiempo { font-size: 10px; color: #e24b4a; font-weight: 600; text-align: center; }
+.mapa-tiempo.demorada { color: #c0392b; font-weight: 700; }
+/* Tile nueva mesa */
+.mapa-nueva { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px 8px; cursor: pointer; border-radius: 10px; border: none; background: transparent; transition: background 0.12s; }
+.mapa-nueva:hover { background: rgba(0,0,0,0.04); }
+.mapa-nueva-icon { width: 56px; height: 56px; border-radius: 50%; background: #f0f0f0; border: 2px dashed #ccc; display: flex; align-items: center; justify-content: center; font-size: 26px; color: #bbb; font-weight: 300; transition: all 0.12s; }
+.mapa-nueva:hover .mapa-nueva-icon { border-color: #1a1a1a; color: #1a1a1a; background: #fff; }
+.mapa-nueva-lbl { font-size: 11px; color: #aaa; text-align: center; }
 
 /* ── OFFLINE ── */
 .offline-banner { display: none; background: #e24b4a; color: #fff; text-align: center; padding: 8px 16px; font-size: 13px; font-weight: 500; position: sticky; top: 0; z-index: 200; }
@@ -1374,32 +1381,54 @@ function setViewMode(mode){
   renderAbiertas();
 }
 
+// SVG cubiertos (fork + knife) para mesa libre
+const SVG_CUBIERTOS = `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <line x1="8" y1="2" x2="8" y2="8"/><line x1="8" y1="12" x2="8" y2="22"/>
+  <path d="M5 2v4a3 3 0 0 0 6 0V2"/>
+  <line x1="16" y1="2" x2="16" y2="22"/>
+</svg>`;
+
 function renderMapaMesas(ab){
-  const cont=document.getElementById('listaAbiertas');
-  const now=Date.now();
-  const nueva=`<div class="mapa-nueva" onclick="switchTab('nueva')"><div style="font-size:28px;font-weight:300;line-height:1;">+</div><div style="font-size:12px;font-weight:500;">Nueva comanda</div></div>`;
-  if(!ab.length){
-    cont.innerHTML=`<div class="mapa-wrap">${nueva}</div><div style="text-align:center;color:#bbb;font-size:13px;padding:28px 0 0;">No hay mesas abiertas</div>`;
-    return;
-  }
-  const cards=ab.map(c=>{
-    const mins=Math.floor((now-c.id)/60000);
-    const cls=mins<30?'v':mins<60?'a':'r';
-    const tiempo=mins<60?mins+'min':Math.floor(mins/60)+'h'+(mins%60>0?' '+mins%60+'m':'');
-    const cortTag=c.cortesias>0?`<div class="mapa-cort">★ Cortesía $${c.cortesias.toLocaleString()}</div>`:'';
-    return`<div class="mapa-card ${cls}">
-      <div class="mapa-badge ${cls}">${tiempo}</div>
-      <div class="mapa-num">Mesa ${c.mesa}</div>
-      <div class="mapa-mesero">${c.mesero}</div>
-      <div class="mapa-total">$${c.total.toLocaleString()}</div>
-      ${cortTag}
-      <div class="mapa-actions">
-        <button class="mapa-btn" onclick="editarComanda(${c.id})">✏ Editar</button>
-        <button class="mapa-btn cobrar" onclick="abrirCobro(${c.id})">Cobrar</button>
-      </div>
+  const cont = document.getElementById('listaAbiertas');
+  const now  = Date.now();
+
+  // Conjunto de mesas abiertas para saber cuáles están ocupadas
+  const mesasOcupadas = new Set(ab.map(c => String(c.mesa)));
+
+  // Generar todas las mesas: S1–S6, T1–T11 (ajusta según tu local)
+  const prefijos = [
+    {p:'S', n:6},
+    {p:'T', n:11},
+  ];
+  const todasMesas = [];
+  prefijos.forEach(({p,n})=>{ for(let i=1;i<=n;i++) todasMesas.push(p+i); });
+
+  const nueva = `<div class="mapa-nueva" onclick="switchTab('nueva')">
+    <div class="mapa-nueva-icon">+</div>
+    <div class="mapa-nueva-lbl">Nueva</div>
+  </div>`;
+
+  const tiles = todasMesas.map(mesaId => {
+    const comanda = ab.find(c => String(c.mesa) === mesaId);
+    if(!comanda){
+      return `<div class="mapa-card">
+        <div class="mapa-icon libre">${SVG_CUBIERTOS}</div>
+        <div class="mapa-num">${mesaId}</div>
+      </div>`;
+    }
+    const mins     = Math.floor((now - comanda.id) / 60000);
+    const demorada = mins >= 60;
+    const iconCls  = demorada ? 'demorada' : 'ocupada';
+    const tiempo   = mins < 60 ? mins+'min' : Math.floor(mins/60)+'h'+(mins%60>0?' '+mins%60+'m':'');
+    return `<div class="mapa-card" onclick="editarComanda(${comanda.id})">
+      <div class="mapa-icon ${iconCls}"></div>
+      <div class="mapa-num">${mesaId}</div>
+      <div class="mapa-mesero">${comanda.mesero}</div>
+      <div class="mapa-tiempo${demorada?' demorada':''}">${tiempo}</div>
     </div>`;
   }).join('');
-  cont.innerHTML=`<div class="mapa-wrap">${cards}${nueva}</div>`;
+
+  cont.innerHTML = `<div class="mapa-wrap">${tiles}${nueva}</div>`;
 }
 
 function renderAbiertas(){
