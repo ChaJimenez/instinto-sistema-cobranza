@@ -3,3 +3,10 @@ node_modules/
 .env
 .vercel/
 *.log
+.vercel
+.env*.local
+.claude/
+.mcp.json
+*\ 2.js
+*\ 2.json
+*\ 2.html
