@@ -1010,7 +1010,7 @@ async function submitPin(){
     const d=await r.json();
     if(d.ok){
       cerrarModal('modalPinGenerico');
-      if(pinCallback){pinCallback();pinCallback=null;}
+      if(pinCallback){const cb=pinCallback;pinCallback=null;cb(val);}
     } else {
       document.getElementById('pinError').textContent='Contraseña incorrecta';
       document.getElementById('pinInputField').value='';
@@ -3811,10 +3811,7 @@ async function confirmarAgregarGerente(){
   if(pin.length<4){toast('⚠ El PIN debe tener al menos 4 dígitos');return;}
   if(gerentesCache.includes(nombre)){toast('⚠ Ya existe un gerente con ese nombre');return;}
   // Cargar lista completa con PINs para guardar
-  pedirPin('Confirmar con PIN admin','Para agregar gerente se requiere PIN de administrador.',async()=>{
-    const adminPin=prompt('PIN de administrador:');if(!adminPin)return;
-    const rGet=await fetch('/api/gerentes').catch(()=>null);
-    const actualFull=rGet?await rGet.json().catch(()=>({})):{};
+  pedirPin('Confirmar con PIN admin','Para agregar gerente se requiere PIN de administrador.',async(adminPin)=>{
     // Los PINs no los devuelve el GET, hay que manejar localmente con la llamada de guardar
     const nuevaLista=[...gerentesCache.map(n=>({nombre:n,pin:'___keep___'})),{nombre,pin}];
     const r=await fetch('/api/gerentes/guardar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin_admin:adminPin,gerentes:nuevaLista})});
