@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Instinto · Cocina</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;overflow:hidden;background:#111;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+
+  /* ── Header ── */
+  .header{display:flex;justify-content:space-between;align-items:center;padding:10px 18px;background:#0a0a0a;border-bottom:2px solid #222;}
+  .header-logo{font-size:16px;font-weight:800;color:#fff;letter-spacing:0.05em;text-transform:uppercase;}
+  .header-right{display:flex;align-items:center;gap:14px;}
+  .live-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;animation:blink 1.5s ease-in-out infinite;flex-shrink:0;}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+  .header-time{font-size:14px;color:#888;font-variant-numeric:tabular-nums;}
+  .header-count{font-size:13px;color:#888;}
+
+  /* ── Grid de comandas ── */
+  .kds-wrap{height:calc(100vh - 49px);overflow-y:auto;padding:12px;display:flex;flex-wrap:wrap;align-content:flex-start;gap:12px;}
+
+  /* ── Tarjeta ── */
+  .kds-card{background:#1e1e1e;border-radius:14px;border:2px solid #2a2a2a;width:calc(33.333% - 8px);min-width:220px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;transition:border-color .3s;}
+  .kds-card.nueva{border-color:#1e3a5f;}
+  .kds-card.alerta{border-color:#f59e0b;}
+  .kds-card.urgente{border-color:#e24b4a;}
+  .kds-card.lista{border-color:#22c55e;opacity:.85;}
+
+  .card-header{padding:12px 14px 10px;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #2a2a2a;}
+  .card-mesa{font-size:20px;font-weight:800;color:#fff;line-height:1;}
+  .card-mesero{font-size:12px;color:#888;margin-top:3px;}
+  .card-timer{text-align:right;}
+  .timer-val{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;}
+  .timer-val.ok{color:#aaa;}
+  .timer-val.alerta{color:#f59e0b;}
+  .timer-val.urgente{color:#e24b4a;}
+  .timer-label{font-size:10px;color:#555;margin-top:2px;}
+
+  /* ── Items ── */
+  .card-items{flex:1;padding:8px 6px;}
+  .kds-item{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:9px;margin-bottom:4px;cursor:pointer;transition:background .12s;-webkit-tap-highlight-color:transparent;user-select:none;}
+  .kds-item:active{transform:scale(.98);}
+  .kds-item.pendiente{background:#242424;}
+  .kds-item.pendiente:hover{background:#2c2c2c;}
+  .kds-item.listo{background:#0f1f0f;opacity:.6;}
+  .kds-item .qty{font-size:15px;font-weight:800;color:#fff;min-width:22px;text-align:center;flex-shrink:0;}
+  .kds-item.listo .qty{color:#22c55e;}
+  .kds-item .nombre{font-size:14px;font-weight:600;flex:1;line-height:1.25;}
+  .kds-item.listo .nombre{color:#4a7a4a;text-decoration:line-through;}
+  .kds-item .nota-kds{font-size:11px;color:#888;font-style:italic;margin-top:2px;}
+  .kds-item .check{font-size:18px;flex-shrink:0;width:24px;text-align:center;}
+  .kds-item.listo .check{color:#22c55e;}
+  .kds-item.pendiente .check{color:#333;}
+
+  /* ── Bump button ── */
+  .card-footer{padding:8px 10px;}
+  .btn-bump{width:100%;padding:12px;background:#22c55e;color:#0a1a0a;border:none;border-radius:9px;font-size:15px;font-weight:800;cursor:pointer;letter-spacing:0.03em;transition:background .1s;-webkit-tap-highlight-color:transparent;}
+  .btn-bump:active{background:#16a34a;transform:scale(.98);}
+  .btn-bump.disabled{background:#2a2a2a;color:#555;pointer-events:none;}
+
+  /* ── Estado vacío ── */
+  .kds-empty{display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;}
+  .kds-empty.visible{display:flex;}
+  .kds-empty-icon{font-size:64px;opacity:.2;}
+  .kds-empty-text{font-size:18px;font-weight:700;color:#444;}
+  .kds-empty-sub{font-size:13px;color:#333;}
+
+  /* Responsive: 2 columnas en tablet vertical */
+  @media(max-width:700px){
+    .kds-card{width:calc(50% - 6px);}
+  }
+  @media(max-width:420px){
+    .kds-card{width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-logo">Instinto · Cocina</span>
+  <div class="header-right">
+    <span class="header-count" id="headerCount"></span>
+    <div class="live-dot" id="liveDot" title="En vivo"></div>
+    <span class="header-time" id="headerTime"></span>
+  </div>
+</div>
+
+<div class="kds-wrap" id="kdsWrap">
+  <div class="kds-empty visible" id="kdsEmpty">
+    <div class="kds-empty-icon">✓</div>
+    <div class="kds-empty-text">Cocina al día</div>
+    <div class="kds-empty-sub">Sin pedidos pendientes</div>
+  </div>
+</div>
+
+<script>
+// ── Categorías de barra (NO se muestran en cocina) ──
+const BARRA = new Set(['Refrescos','Cervezas','Cervezas Artesanales','Preparados','Cafés']);
+
+// ── Estado local (persiste en sessionStorage — se limpia al recargar) ──
+function loadState() {
+  try { return JSON.parse(sessionStorage.getItem('kds') || '{"ready":{},"bumped":[]}'); }
+  catch(e) { return {ready:{},bumped:[]}; }
+}
+function saveState(s) {
+  try { sessionStorage.setItem('kds', JSON.stringify(s)); } catch(e){}
+}
+let state = loadState();
+
+// ── Reloj ──
+function tick() {
+  const now = new Date();
+  document.getElementById('headerTime').textContent =
+    now.toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
+tick(); setInterval(tick, 1000);
+
+// ── Calcular minutos desde timestamp ──
+function minutosDesde(ts) {
+  return Math.floor((Date.now() - ts) / 60000);
+}
+function timerClass(mins) {
+  if (mins >= 20) return 'urgente';
+  if (mins >= 10) return 'alerta';
+  return 'ok';
+}
+function cardClass(mins, todasListas) {
+  if (todasListas) return 'lista';
+  if (mins >= 20) return 'urgente';
+  if (mins >= 10) return 'alerta';
+  return 'nueva';
+}
+
+// ── Toggle ítem listo ──
+function toggleItem(cmdId, idx) {
+  if (!state.ready[cmdId]) state.ready[cmdId] = [];
+  const pos = state.ready[cmdId].indexOf(idx);
+  if (pos >= 0) state.ready[cmdId].splice(pos, 1);
+  else state.ready[cmdId].push(idx);
+  saveState(state);
+  renderAll(lastCmds);
+}
+
+// ── Bump ──
+function bump(cmdId) {
+  if (!state.bumped.includes(cmdId)) state.bumped.push(cmdId);
+  saveState(state);
+  renderAll(lastCmds);
+}
+
+// ── Render principal ──
+let lastCmds = [];
+
+function renderAll(cmds) {
+  lastCmds = cmds;
+
+  // Limpiar bumped que ya no existen en i:cmd (ya fueron pagados)
+  const cmdIds = new Set(cmds.map(c => String(c.id)));
+  state.bumped = state.bumped.filter(id => cmdIds.has(id));
+  saveState(state);
+
+  // Filtrar: solo abiertas, no bumpeadas, con ítems de cocina no cancelados
+  const visibles = cmds.filter(c => {
+    if (c.estado !== 'abierta') return false;
+    if (state.bumped.includes(String(c.id))) return false;
+    const cocina = (c.items || []).filter(it => !it.cancelado && !BARRA.has(it.cat));
+    return cocina.length > 0;
+  });
+
+  const wrap = document.getElementById('kdsWrap');
+  const empty = document.getElementById('kdsEmpty');
+
+  if (!visibles.length) {
+    empty.classList.add('visible');
+    // Eliminar tarjetas sin remover el empty div
+    wrap.querySelectorAll('.kds-card').forEach(el => el.remove());
+    document.getElementById('headerCount').textContent = '';
+    return;
+  }
+  empty.classList.remove('visible');
+  document.getElementById('headerCount').textContent = `${visibles.length} pedido${visibles.length!==1?'s':''}`;
+
+  // Ordenar por antigüedad (más viejo primero)
+  visibles.sort((a, b) => a.id - b.id);
+
+  // Construir mapa de cards existentes para diff mínimo
+  const existing = {};
+  wrap.querySelectorAll('.kds-card').forEach(el => { existing[el.dataset.cmdid] = el; });
+
+  // Ids que deben mostrarse
+  const visibleIds = new Set(visibles.map(c => String(c.id)));
+
+  // Eliminar los que ya no van
+  Object.entries(existing).forEach(([id, el]) => {
+    if (!visibleIds.has(id)) el.remove();
+  });
+
+  visibles.forEach((cmd, pos) => {
+    const cid = String(cmd.id);
+    const mins = minutosDesde(cmd.id);
+    const cocina = (cmd.items || []).filter(it => !it.cancelado && !BARRA.has(it.cat));
+    const readySet = new Set(state.ready[cid] || []);
+    const todasListas = cocina.length > 0 && cocina.every((_, i) => readySet.has(i));
+
+    const timerCls = timerClass(mins);
+    const cardCls  = cardClass(mins, todasListas);
+
+    const itemsHtml = cocina.map((it, i) => {
+      const esListo = readySet.has(i);
+      const nota = it.nota ? `<div class="nota-kds">${it.nota}</div>` : '';
+      return `<div class="kds-item ${esListo?'listo':'pendiente'}" onclick="toggleItem('${cid}',${i})">
+        <span class="qty">${it.q}×</span>
+        <div style="flex:1;min-width:0;">
+          <div class="nombre">${it.n.replace(/^\+/,'')}</div>${nota}
+        </div>
+        <span class="check">${esListo?'✓':'○'}</span>
+      </div>`;
+    }).join('');
+
+    const bump_html = `<div class="card-footer">
+      <button class="btn-bump ${todasListas?'':'disabled'}" onclick="bump('${cid}')">
+        ${todasListas ? '✓ BUMP — listo' : `Faltan ${cocina.length - readySet.size} ítems`}
+      </button>
+    </div>`;
+
+    const html = `
+      <div class="card-header">
+        <div>
+          <div class="card-mesa">Mesa ${cmd.mesa || '—'}</div>
+          <div class="card-mesero">${cmd.mesero || ''}</div>
+        </div>
+        <div class="card-timer">
+          <div class="timer-val ${timerCls}">${mins}m</div>
+          <div class="timer-label">en espera</div>
+        </div>
+      </div>
+      <div class="card-items">${itemsHtml}</div>
+      ${bump_html}`;
+
+    if (existing[cid]) {
+      // Actualizar card existente (timer + estado ítems)
+      const card = existing[cid];
+      card.className = `kds-card ${cardCls}`;
+      card.innerHTML = html;
+    } else {
+      // Nueva card — insertar en posición correcta
+      const card = document.createElement('div');
+      card.className = `kds-card ${cardCls}`;
+      card.dataset.cmdid = cid;
+      card.innerHTML = html;
+      // Insertar en orden (más viejo primero)
+      const allCards = wrap.querySelectorAll('.kds-card');
+      if (pos < allCards.length) {
+        wrap.insertBefore(card, allCards[pos]);
+      } else {
+        wrap.appendChild(card);
+      }
+    }
+    if (existing[cid]) existing[cid].className = `kds-card ${cardCls}`;
+  });
+}
+
+// ── Polling ──
+let errorCount = 0;
+
+async function poll() {
+  try {
+    const r = await fetch('/api/datos');
+    const d = await r.json();
+    errorCount = 0;
+    document.getElementById('liveDot').style.background = '#22c55e';
+    renderAll(d.cmd || []);
+  } catch(e) {
+    errorCount++;
+    if (errorCount >= 3) document.getElementById('liveDot').style.background = '#e24b4a';
+  }
+}
+
+poll();
+setInterval(poll, 3000);
+</script>
+</body>
+</html>

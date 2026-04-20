@@ -290,6 +290,125 @@ app.post('/api/toteat-dias', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Menú configurable ──
+const MENU_KEY = 'i:menu';
+
+app.get('/api/menu', async (req, res) => {
+  try {
+    const menu = await kv.get(MENU_KEY);
+    res.json({ menu: menu || null });
+  } catch (e) {
+    res.json({ menu: null });
+  }
+});
+
+app.post('/api/menu', async (req, res) => {
+  try {
+    const { pin, categorias, extras, log86 } = req.body || {};
+    if (pin !== PIN) return res.status(401).json({ error: 'PIN incorrecto' });
+    if (!categorias || typeof categorias !== 'object') return res.status(400).json({ error: 'Formato inválido' });
+    await kv.set(MENU_KEY, { categorias, extras: extras || [] });
+    if (Array.isArray(log86) && log86.length) {
+      await kv.rpush('i:86log', ...log86.map(e => JSON.stringify(e)));
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('/api/menu POST:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Reporte 86 — historial de ítems desactivados/reactivados ──
+app.get('/api/86log', async (req, res) => {
+  try {
+    const raw = await kv.lrange('i:86log', -200, -1);
+    const entries = raw.map(e => (typeof e === 'string' ? JSON.parse(e) : e));
+    res.json({ entries: entries.reverse() });
+  } catch(e) { res.json({ entries: [] }); }
+});
+
+// ── Empleados (todos: meseros, cocineros, gerentes, etc.) ──
+const EMPLEADOS_KEY = 'i:empleados';
+
+app.get('/api/empleados', async (req, res) => {
+  try {
+    const lista = await kv.get(EMPLEADOS_KEY) || [];
+    res.json({ empleados: lista });
+  } catch(e) { res.json({ empleados: [] }); }
+});
+
+app.post('/api/empleados', async (req, res) => {
+  try {
+    const { pin, empleados } = req.body || {};
+    if (pin !== PIN) return res.status(401).json({ error: 'PIN incorrecto' });
+    if (!Array.isArray(empleados)) return res.status(400).json({ error: 'Formato inválido' });
+    await kv.set(EMPLEADOS_KEY, empleados);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Turnos — check-in / check-out ──
+// Cada turno: { id, nombre, rol, salarioDia, fecha, entrada, salida }
+// Key diario: i:turnos:YYYY-MM-DD (expira en 90 días)
+
+function fechaHoy() {
+  return new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Mexico_City' });
+}
+
+app.post('/api/turno/entrada', async (req, res) => {
+  try {
+    const { nombre } = req.body || {};
+    if (!nombre) return res.status(400).json({ error: 'Falta nombre' });
+    const fecha = fechaHoy();
+    const key = `i:turnos:${fecha}`;
+    const turnos = await kv.get(key) || [];
+    // Verificar que no tenga entrada activa sin salida
+    const activo = turnos.find(t => t.nombre === nombre && !t.salida);
+    if (activo) return res.json({ ok: false, yaEntro: true });
+    const turno = { id: Date.now(), nombre, fecha, entrada: new Date().toISOString(), salida: null };
+    turnos.push(turno);
+    await kv.set(key, turnos, { ex: 60 * 60 * 24 * 90 });
+    res.json({ ok: true, turno });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/turno/salida', async (req, res) => {
+  try {
+    const { nombre } = req.body || {};
+    if (!nombre) return res.status(400).json({ error: 'Falta nombre' });
+    const fecha = fechaHoy();
+    const key = `i:turnos:${fecha}`;
+    const turnos = await kv.get(key) || [];
+    const turno = turnos.find(t => t.nombre === nombre && !t.salida);
+    if (!turno) return res.json({ ok: false, noEntrada: true });
+    turno.salida = new Date().toISOString();
+    const mins = Math.round((new Date(turno.salida) - new Date(turno.entrada)) / 60000);
+    turno.minutos = mins;
+    await kv.set(key, turnos, { ex: 60 * 60 * 24 * 90 });
+    res.json({ ok: true, turno, minutos: mins });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/turno/hoy', async (req, res) => {
+  try {
+    const fecha = fechaHoy();
+    const [turnos, empleados] = await Promise.all([
+      kv.get(`i:turnos:${fecha}`) || [],
+      kv.get(EMPLEADOS_KEY) || [],
+    ]);
+    const turnosReal = turnos || [];
+    // Enriquecer con salarioDia del catálogo
+    const empMap = {};
+    (empleados || []).forEach(e => { empMap[e.nombre] = e; });
+    const enriquecidos = turnosReal.map(t => ({
+      ...t,
+      rol: empMap[t.nombre]?.rol || '',
+      salarioDia: empMap[t.nombre]?.salarioDia || 0,
+    }));
+    res.json({ fecha, turnos: enriquecidos });
+  } catch(e) { res.json({ fecha: fechaHoy(), turnos: [] }); }
+});
+
 app.get('/health', (req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
 module.exports = app;

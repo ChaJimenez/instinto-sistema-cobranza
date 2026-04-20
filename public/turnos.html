@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Instinto · Turnos</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f4f6fa;min-height:100vh;color:#1a1a1a;}
+  .header{background:#0D2A5E;color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;}
+  .header-title{font-size:17px;font-weight:700;letter-spacing:0.02em;}
+  .header-fecha{font-size:12px;color:#a8bcdf;margin-top:2px;}
+  .btn-admin{font-size:12px;color:#a8bcdf;border:1px solid #2a4a7f;background:transparent;border-radius:6px;padding:6px 12px;cursor:pointer;}
+  .btn-admin:hover{background:#1a3a6e;color:#fff;}
+  .main{max-width:600px;margin:0 auto;padding:20px 16px;}
+  .section-title{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;}
+  .empleados-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:28px;}
+  .emp-card{background:#fff;border-radius:12px;padding:16px 12px;text-align:center;cursor:pointer;border:2px solid transparent;transition:all .15s;box-shadow:0 1px 4px rgba(0,0,0,.07);}
+  .emp-card:active{transform:scale(.97);}
+  .emp-card.dentro{border-color:#22c55e;background:#f0fff4;}
+  .emp-card.dentro .emp-status{color:#16a34a;background:#dcfce7;}
+  .emp-card .emp-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;margin:0 auto 10px;background:#0D2A5E;}
+  .emp-card.dentro .emp-avatar{background:#16a34a;}
+  .emp-name{font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:2px;word-break:break-word;}
+  .emp-rol{font-size:11px;color:#aaa;margin-bottom:8px;}
+  .emp-status{font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px;background:#f0f0f0;color:#888;display:inline-block;}
+  .emp-time{font-size:10px;color:#888;margin-top:4px;}
+  .empty-msg{color:#aaa;font-size:13px;text-align:center;padding:40px 0;}
+
+  /* Modal confirmación */
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:center;justify-content:center;}
+  .modal-bg.open{display:flex;}
+  .modal{background:#fff;border-radius:16px;padding:28px 24px;max-width:320px;width:90%;text-align:center;}
+  .modal-avatar{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff;margin:0 auto 12px;}
+  .modal-nombre{font-size:18px;font-weight:700;margin-bottom:4px;}
+  .modal-rol{font-size:13px;color:#aaa;margin-bottom:16px;}
+  .modal-accion{font-size:15px;color:#555;margin-bottom:20px;line-height:1.5;}
+  .modal-accion strong{color:#1a1a1a;}
+  .btn-confirmar{width:100%;padding:13px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;}
+  .btn-confirmar.entrada{background:#0D2A5E;color:#fff;}
+  .btn-confirmar.salida{background:#16a34a;color:#fff;}
+  .btn-cancelar{width:100%;padding:11px;border:1px solid #e0e0e0;background:#fff;border-radius:10px;font-size:14px;color:#888;cursor:pointer;}
+
+  /* Panel admin */
+  .panel-admin{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07);margin-bottom:20px;display:none;}
+  .panel-admin.open{display:block;}
+  .pin-row{display:flex;gap:8px;margin-bottom:16px;}
+  .pin-row input{flex:1;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:15px;letter-spacing:.15em;outline:none;}
+  .pin-row button{padding:10px 18px;background:#0D2A5E;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;}
+  .pin-error{font-size:12px;color:#e24b4a;margin-bottom:12px;min-height:16px;}
+  .resumen-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .resumen-table th{text-align:left;padding:6px 8px;color:#888;font-weight:600;border-bottom:2px solid #eee;font-size:11px;text-transform:uppercase;}
+  .resumen-table td{padding:8px 8px;border-bottom:1px solid #f5f5f5;}
+  .badge-rol{font-size:10px;padding:2px 7px;border-radius:8px;font-weight:600;background:#e8edff;color:#0D2A5E;}
+  .kpi-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;}
+  .kpi{background:#f7f9ff;border-radius:10px;padding:12px;text-align:center;}
+  .kpi-val{font-size:22px;font-weight:700;color:#0D2A5E;}
+  .kpi-label{font-size:11px;color:#888;margin-top:2px;}
+
+  /* Gestión de empleados */
+  .emp-list-admin{margin-top:16px;}
+  .emp-admin-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f5f5f5;}
+  .emp-admin-row input{padding:6px 10px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;outline:none;}
+  .emp-admin-row input:focus{border-color:#0D2A5E;}
+  .inp-nombre{flex:1;min-width:0;}
+  .inp-rol{width:120px;}
+  .inp-salario{width:80px;text-align:right;}
+  .btn-del{background:none;border:none;color:#ccc;font-size:18px;cursor:pointer;flex-shrink:0;padding:0 2px;}
+  .btn-del:hover{color:#e24b4a;}
+  .add-emp-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .btn-add-emp{padding:8px 14px;border:1px dashed #0D2A5E;background:transparent;color:#0D2A5E;border-radius:8px;font-size:13px;cursor:pointer;}
+  .btn-save-emp{padding:8px 18px;background:#0D2A5E;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
+  .save-msg{font-size:12px;margin-top:8px;min-height:16px;}
+  .tabs{display:flex;gap:6px;margin-bottom:16px;}
+  .tab-btn{padding:7px 14px;border:1px solid #e0e0e0;background:#fff;border-radius:8px;font-size:13px;cursor:pointer;color:#888;}
+  .tab-btn.active{background:#0D2A5E;color:#fff;border-color:#0D2A5E;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">Instinto · Asistencia</div>
+    <div class="header-fecha" id="headerFecha"></div>
+  </div>
+  <button class="btn-admin" onclick="toggleAdmin()">Panel admin</button>
+</div>
+
+<div class="main">
+
+  <!-- Panel admin (oculto por defecto) -->
+  <div class="panel-admin" id="panelAdmin">
+    <div class="pin-row" id="pinRow">
+      <input type="password" id="pinInput" placeholder="PIN admin" maxlength="8" onkeydown="if(event.key==='Enter')validarAdmin()">
+      <button onclick="validarAdmin()">Entrar</button>
+    </div>
+    <div class="pin-error" id="pinError"></div>
+    <div id="adminContent" style="display:none;">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('resumen')">Resumen del día</button>
+        <button class="tab-btn" onclick="switchTab('empleados')">Empleados</button>
+      </div>
+      <!-- Resumen -->
+      <div id="tabResumen">
+        <div class="kpi-row" id="kpiRow"></div>
+        <table class="resumen-table">
+          <thead><tr>
+            <th>Empleado</th><th>Rol</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>Costo</th>
+          </tr></thead>
+          <tbody id="resumenBody"></tbody>
+        </table>
+      </div>
+      <!-- Gestión empleados -->
+      <div id="tabEmpleados" style="display:none;">
+        <div id="empListAdmin" class="emp-list-admin"></div>
+        <div class="add-emp-row">
+          <button class="btn-add-emp" onclick="addEmpRow()">＋ Agregar empleado</button>
+          <button class="btn-save-emp" onclick="guardarEmpleados()">Guardar</button>
+        </div>
+        <div class="save-msg" id="saveMsg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grid empleados -->
+  <div class="section-title">¿Quién entra o sale hoy?</div>
+  <div class="empleados-grid" id="empleadosGrid">
+    <div class="empty-msg">Cargando...</div>
+  </div>
+
+</div>
+
+<!-- Modal confirmación -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="modal-avatar" id="modalAvatar"></div>
+    <div class="modal-nombre" id="modalNombre"></div>
+    <div class="modal-rol" id="modalRol"></div>
+    <div class="modal-accion" id="modalAccion"></div>
+    <button class="btn-confirmar" id="btnConfirmar" onclick="confirmarAccion()"></button>
+    <button class="btn-cancelar" onclick="cerrarModal()">Cancelar</button>
+  </div>
+</div>
+
+<script>
+const ROLES = ['Mesero','Mesera','Cocinero','Cocinera','Gerente','Barra','Cajero','Limpieza','Otro'];
+const ROL_COLORS = {
+  'Mesero':'#0D2A5E','Mesera':'#0D2A5E','Cocinero':'#b06800','Cocinera':'#b06800',
+  'Gerente':'#6d28d9','Barra':'#0891b2','Cajero':'#16a34a','Limpieza':'#64748b','Otro':'#888'
+};
+
+let empleados = [];
+let turnosHoy = [];
+let accionPendiente = null;
+let adminAutenticado = false;
+
+function iniciales(nombre) {
+  return nombre.trim().split(' ').map(p=>p[0]).join('').toUpperCase().slice(0,2);
+}
+function fmtHora(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+}
+function fmtHoras(mins) {
+  if (!mins && mins !== 0) return '—';
+  const h = Math.floor(mins/60), m = mins%60;
+  return h>0 ? `${h}h ${m>0?m+'m':''}`.trim() : `${m}m`;
+}
+function rolColor(rol) { return ROL_COLORS[rol] || '#888'; }
+
+// ── Fecha en header ──
+function actualizarFecha() {
+  const d = new Date();
+  document.getElementById('headerFecha').textContent =
+    d.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
+}
+
+// ── Cargar datos ──
+async function cargar() {
+  try {
+    const [r1, r2] = await Promise.all([fetch('/api/empleados'), fetch('/api/turno/hoy')]);
+    const d1 = await r1.json();
+    const d2 = await r2.json();
+    empleados = d1.empleados || [];
+    turnosHoy = d2.turnos || [];
+    renderGrid();
+  } catch(e) {
+    document.getElementById('empleadosGrid').innerHTML = '<div class="empty-msg">Error al cargar — recarga la página</div>';
+  }
+}
+
+// ── Grid principal ──
+function renderGrid() {
+  const grid = document.getElementById('empleadosGrid');
+  if (!empleados.length) {
+    grid.innerHTML = '<div class="empty-msg">Sin empleados registrados — configúralos en Panel admin</div>';
+    return;
+  }
+  grid.innerHTML = empleados.map(emp => {
+    const turnoActivo = turnosHoy.find(t => t.nombre === emp.nombre && !t.salida);
+    const dentro = !!turnoActivo;
+    const color = rolColor(emp.rol);
+    const hora = dentro ? fmtHora(turnoActivo.entrada) : '';
+    return `<div class="emp-card${dentro?' dentro':''}" onclick="tapEmpleado('${emp.nombre.replace(/'/g,"\\'")}')">
+      <div class="emp-avatar" style="background:${color};">${iniciales(emp.nombre)}</div>
+      <div class="emp-name">${emp.nombre}</div>
+      <div class="emp-rol">${emp.rol}</div>
+      <div class="emp-status">${dentro ? '● Dentro' : 'Fuera'}</div>
+      ${hora ? `<div class="emp-time">Desde ${hora}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── Modal ──
+function tapEmpleado(nombre) {
+  const emp = empleados.find(e => e.nombre === nombre);
+  if (!emp) return;
+  const turnoActivo = turnosHoy.find(t => t.nombre === nombre && !t.salida);
+  const dentro = !!turnoActivo;
+  const color = rolColor(emp.rol);
+  document.getElementById('modalAvatar').style.background = color;
+  document.getElementById('modalAvatar').textContent = iniciales(nombre);
+  document.getElementById('modalNombre').textContent = nombre;
+  document.getElementById('modalRol').textContent = emp.rol;
+  const btn = document.getElementById('btnConfirmar');
+  if (dentro) {
+    const mins = Math.round((Date.now() - new Date(turnoActivo.entrada)) / 60000);
+    document.getElementById('modalAccion').innerHTML =
+      `Llevas <strong>${fmtHoras(mins)}</strong> en turno.<br>¿Confirmas tu salida?`;
+    btn.textContent = 'Registrar salida';
+    btn.className = 'btn-confirmar salida';
+    accionPendiente = { tipo: 'salida', nombre };
+  } else {
+    document.getElementById('modalAccion').innerHTML =
+      `¿Confirmas tu <strong>entrada</strong> al turno?`;
+    btn.textContent = 'Registrar entrada';
+    btn.className = 'btn-confirmar entrada';
+    accionPendiente = { tipo: 'entrada', nombre };
+  }
+  document.getElementById('modalBg').classList.add('open');
+}
+
+function cerrarModal() {
+  document.getElementById('modalBg').classList.remove('open');
+  accionPendiente = null;
+}
+
+async function confirmarAccion() {
+  if (!accionPendiente) return;
+  const { tipo, nombre } = accionPendiente;
+  cerrarModal();
+  try {
+    const r = await fetch(`/api/turno/${tipo}`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ nombre })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      await cargar();
+      if (tipo === 'salida' && d.minutos !== undefined) {
+        mostrarToast(`${nombre} — ${fmtHoras(d.minutos)} trabajados`);
+      } else {
+        mostrarToast(`${nombre} — entrada registrada`);
+      }
+    } else if (d.yaEntro) {
+      mostrarToast(`${nombre} ya tiene entrada activa`, true);
+    } else if (d.noEntrada) {
+      mostrarToast(`${nombre} no tiene entrada registrada`, true);
+    }
+  } catch(e) { mostrarToast('Error de conexión', true); }
+}
+
+// ── Toast ──
+function mostrarToast(msg, error=false) {
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:${error?'#e24b4a':'#0D2A5E'};color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,.2);`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ── Panel admin ──
+function toggleAdmin() {
+  const p = document.getElementById('panelAdmin');
+  p.classList.toggle('open');
+  if (!adminAutenticado) {
+    document.getElementById('pinInput').focus();
+  }
+}
+
+async function validarAdmin() {
+  const pin = document.getElementById('pinInput').value;
+  try {
+    const r = await fetch('/api/validate-pin', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ pin })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      adminAutenticado = true;
+      document.getElementById('pinRow').style.display = 'none';
+      document.getElementById('pinError').textContent = '';
+      document.getElementById('adminContent').style.display = 'block';
+      cargarResumen();
+      cargarEmpleadosAdmin();
+    } else {
+      document.getElementById('pinError').textContent = 'PIN incorrecto';
+    }
+  } catch(e) { document.getElementById('pinError').textContent = 'Error de conexión'; }
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tabResumen').style.display = tab==='resumen'?'block':'none';
+  document.getElementById('tabEmpleados').style.display = tab==='empleados'?'block':'none';
+  event.target.classList.add('active');
+}
+
+// ── Resumen del día ──
+function cargarResumen() {
+  const turnos = turnosHoy;
+  const enTurno = turnos.filter(t => !t.salida).length;
+  const completados = turnos.filter(t => t.salida);
+  const horasTotal = completados.reduce((s,t) => s + (t.minutos||0), 0);
+  const costoTotal = turnos.reduce((s,t) => {
+    const sal = t.salarioDia || 0;
+    return s + sal;
+  }, 0);
+  // KPIs
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi"><div class="kpi-val">${turnos.length}</div><div class="kpi-label">Total hoy</div></div>
+    <div class="kpi"><div class="kpi-val">${enTurno}</div><div class="kpi-label">En turno ahora</div></div>
+    <div class="kpi"><div class="kpi-val">${costoTotal>0?'$'+costoTotal.toLocaleString():'—'}</div><div class="kpi-label">Costo estimado</div></div>
+  `;
+  // Tabla
+  if (!turnos.length) {
+    document.getElementById('resumenBody').innerHTML = '<tr><td colspan="6" style="color:#aaa;text-align:center;padding:20px;">Sin registros hoy</td></tr>';
+    return;
+  }
+  document.getElementById('resumenBody').innerHTML = turnos.map(t => {
+    const mins = t.salida
+      ? (t.minutos || Math.round((new Date(t.salida)-new Date(t.entrada))/60000))
+      : Math.round((Date.now()-new Date(t.entrada))/60000);
+    const costo = t.salarioDia > 0 ? '$'+t.salarioDia.toLocaleString() : '—';
+    const salidaLabel = t.salida ? fmtHora(t.salida) : '<span style="color:#f59e0b;font-weight:600;">En turno</span>';
+    return `<tr>
+      <td style="font-weight:500;">${t.nombre}</td>
+      <td><span class="badge-rol" style="background:${rolColor(t.rol)}20;color:${rolColor(t.rol)};">${t.rol||'—'}</span></td>
+      <td>${fmtHora(t.entrada)}</td>
+      <td>${salidaLabel}</td>
+      <td>${fmtHoras(mins)}</td>
+      <td>${costo}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Gestión de empleados (admin) ──
+function cargarEmpleadosAdmin() {
+  renderEmpListAdmin();
+}
+
+function renderEmpListAdmin() {
+  const c = document.getElementById('empListAdmin');
+  if (!empleados.length) { c.innerHTML = '<div style="color:#aaa;font-size:13px;padding:8px 0;">Sin empleados — agrega el primero</div>'; return; }
+  c.innerHTML = `
+    <div style="display:flex;gap:8px;padding:0 0 6px;border-bottom:2px solid #eee;margin-bottom:4px;">
+      <span style="flex:1;font-size:11px;color:#888;font-weight:600;">NOMBRE</span>
+      <span style="width:120px;font-size:11px;color:#888;font-weight:600;">ROL</span>
+      <span style="width:80px;font-size:11px;color:#888;font-weight:600;text-align:right;">SUELDO/DÍA</span>
+      <span style="width:24px;"></span>
+    </div>` +
+  empleados.map((e,i) => `
+    <div class="emp-admin-row">
+      <input class="inp-nombre" type="text" value="${e.nombre}" placeholder="Nombre" data-idx="${i}" data-field="nombre">
+      <select class="inp-rol" data-idx="${i}" data-field="rol" style="padding:6px 8px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;outline:none;background:#fff;">
+        ${ROLES.map(r=>`<option value="${r}"${r===e.rol?' selected':''}>${r}</option>`).join('')}
+      </select>
+      <input class="inp-salario" type="number" value="${e.salarioDia||0}" min="0" step="10" placeholder="0" data-idx="${i}" data-field="salarioDia" style="padding:6px 8px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;outline:none;text-align:right;">
+      <button class="btn-del" onclick="delEmp(${i})">✕</button>
+    </div>`).join('');
+  c.querySelectorAll('input,select').forEach(el => {
+    el.addEventListener('change', () => {
+      const i = +el.dataset.idx, f = el.dataset.field;
+      empleados[i][f] = f==='salarioDia' ? (parseFloat(el.value)||0) : el.value;
+    });
+  });
+}
+
+function addEmpRow() {
+  empleados.push({ nombre: '', rol: 'Mesero', salarioDia: 0 });
+  renderEmpListAdmin();
+  const inputs = document.querySelectorAll('.inp-nombre');
+  inputs[inputs.length-1]?.focus();
+}
+
+function delEmp(i) {
+  empleados.splice(i, 1);
+  renderEmpListAdmin();
+}
+
+async function guardarEmpleados() {
+  // Leer valores actuales del DOM antes de guardar
+  document.querySelectorAll('.emp-admin-row').forEach((row, i) => {
+    if (!empleados[i]) return;
+    empleados[i].nombre = row.querySelector('.inp-nombre')?.value?.trim() || empleados[i].nombre;
+    empleados[i].rol = row.querySelector('.inp-rol')?.value || empleados[i].rol;
+    empleados[i].salarioDia = parseFloat(row.querySelector('.inp-salario')?.value) || 0;
+  });
+  empleados = empleados.filter(e => e.nombre);
+  const pin = document.getElementById('pinInput').value || prompt('PIN admin:') || '';
+  const msg = document.getElementById('saveMsg');
+  try {
+    const r = await fetch('/api/empleados', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ pin, empleados })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      msg.style.color='#16a34a'; msg.textContent='✓ Guardado';
+      renderGrid();
+      setTimeout(()=>msg.textContent='',3000);
+    } else { msg.style.color='#e24b4a'; msg.textContent=d.error||'Error'; }
+  } catch(e) { msg.style.color='#e24b4a'; msg.textContent='Error de conexión'; }
+}
+
+// ── Init ──
+actualizarFecha();
+cargar();
+// Refrescar cada 30s para que se actualice sin recargar
+setInterval(()=>{
+  cargar();
+  if(adminAutenticado) cargarResumen();
+}, 30000);
+</script>
+</body>
+</html>

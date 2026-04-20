@@ -236,6 +236,16 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
   <div class="sec">Menú</div>
   <div class="cat-tabs" id="catTabs"></div>
   <div class="platillos-grid" id="platillosGrid"></div>
+  <div id="modsStrip" style="display:none;margin-bottom:4px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <div class="sec" style="margin:0;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:10px;font-weight:700;color:#0D2A5E;background:#e8edff;padding:2px 8px;border-radius:10px;letter-spacing:0.05em;">MODS</span>
+        <span id="modsStripTitle" style="font-size:13px;color:#444;"></span>
+      </div>
+      <button onclick="clearModsStrip()" style="background:none;border:none;color:#bbb;font-size:18px;cursor:pointer;padding:2px 6px;line-height:1;">✕</button>
+    </div>
+    <div class="extras-grid" id="modsStripGrid"></div>
+  </div>
   <div class="extras-section">
     <div class="sec">Extras y complementos</div>
     <div class="extras-grid" id="extrasGrid"></div>
@@ -424,6 +434,8 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
     <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
       <button class="btn btn-outline btn-sm" onclick="verReportePeriodo()" style="white-space:nowrap;background:#0D2A5E;color:#fff;border-color:#0D2A5E;">📄 Ver reporte</button>
       <button class="btn btn-outline btn-sm" onclick="exportarDashboard()" style="white-space:nowrap;color:#0D2A5E;border-color:#0D2A5E;">⬇ Exportar JSON</button>
+      <button class="btn btn-outline btn-sm" onclick="togglePanelMenu()" style="white-space:nowrap;color:#0D2A5E;border-color:#0D2A5E;">🍔 Editar Menú</button>
+      <button class="btn btn-outline btn-sm" onclick="togglePanel86()" style="white-space:nowrap;color:#e24b4a;border-color:#e24b4a;">🚫 Reporte 86</button>
       <button class="btn btn-outline btn-sm" onclick="adminAutenticado=false;switchTab('nueva')" style="white-space:nowrap;">🔒 Cerrar sesión</button>
     </div>
   </div>
@@ -441,6 +453,16 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
   </div>
 
   <div id="adminKpis"></div>
+
+  <!-- Widget de labor (costo de mano de obra del día) -->
+  <div class="admin-card" id="laborCard" style="border-left:3px solid #0D2A5E;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div class="admin-card-title" style="margin:0;border:none;padding:0;">Mano de obra · hoy</div>
+      <a href="/turnos" target="_blank" style="font-size:12px;color:#0D2A5E;text-decoration:none;border:1px solid #0D2A5E;border-radius:6px;padding:3px 10px;">Ver turnos ↗</a>
+    </div>
+    <div id="laborKpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;"></div>
+    <div id="laborDetalle" style="font-size:12px;color:#888;"></div>
+  </div>
 
   <div class="admin-card">
     <div class="admin-card-title">Ventas por <span id="adminChartLabel">hora</span></div>
@@ -543,6 +565,36 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
       <div id="invTabMerma" style="display:none;"></div>
     </div>
   </div>
+
+  <!-- REPORTE 86 -->
+  <div id="admin86Card" class="admin-card" style="border-top:3px solid #e24b4a;display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.08em;">🚫 Reporte 86</div>
+        <div style="font-size:12px;color:#aaa;margin-top:3px;">Historial de ítems desactivados y reactivados del menú</div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="cargar86Log()" style="color:#e24b4a;border-color:#e24b4a;">↺ Actualizar</button>
+    </div>
+    <div id="log86Content" style="font-size:13px;color:#555;"></div>
+  </div>
+
+  <!-- EDITOR DE MENÚ -->
+  <div id="adminMenuCard" class="admin-card" style="border-top:3px solid #0D2A5E;display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.08em;">🍔 Editor de Menú</div>
+        <div style="font-size:12px;color:#aaa;margin-top:3px;">Los cambios se sincronizan en todos los dispositivos al guardar</div>
+      </div>
+      <button class="btn btn-dark btn-sm" onclick="guardarMenuAdmin()" id="btnGuardarMenu" style="background:#0D2A5E;">💾 Guardar cambios</button>
+    </div>
+    <div id="menuEditorContent"></div>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid #eee;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <input type="text" id="nuevaCatNombre" placeholder="Nueva categoría..." style="padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;width:220px;" onkeydown="if(event.key==='Enter')addMenuCat()">
+      <button class="btn btn-outline btn-sm" onclick="addMenuCat()" style="color:#0D2A5E;border-color:#0D2A5E;">＋ Categoría</button>
+    </div>
+    <div id="menuEditorMsg" style="margin-top:10px;font-size:13px;min-height:18px;font-weight:500;"></div>
+  </div>
+
 </div>
 
 <!-- MODAL: editar venta cerrada -->
@@ -647,13 +699,16 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
       </div>
       <div>
         <div style="font-size:11px;color:#888;margin-bottom:4px;">Categoría</div>
-        <select id="nuevoIngCat" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;background:#fff;">
+        <select id="nuevoIngCat" onchange="toggleNuevaCat(this.value)" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;background:#fff;">
           <option value="barra">🍺 Barra</option>
           <option value="cocina">🍳 Cocina</option>
           <option value="abarrotes">📦 Abarrotes</option>
           <option value="limpieza">🧹 Limpieza</option>
           <option value="otro">Otro</option>
+          <option value="__nueva__">＋ Nueva categoría…</option>
         </select>
+        <input type="text" id="nuevoIngCatNueva" placeholder="Nombre de la categoría" maxlength="30"
+          style="display:none;width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;margin-top:6px;box-sizing:border-box;" />
       </div>
       <div>
         <div style="font-size:11px;color:#888;margin-bottom:4px;">Unidad</div>
@@ -781,7 +836,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f3; m
 const PRINT_SERVER = 'http://127.0.0.1:3000';
 const API_KEY = '';
 
-const MENU = {
+let MENU = {
   "Hamburguesas":[{n:"Cheeseburger Clásica",p:95},{n:"Doble Doble",p:128},{n:"Hamburguesa con Tocino",p:158},{n:"Crispy Chicken Hot Honey",p:148},{n:"Vegetariana",p:138}],
   "Entradas":[{n:"Papas Fritas",p:58},{n:"Bastones de Camote",p:58},{n:"Papas con Salsa Queso y Tocino",p:88},{n:"Mac & Cheese tipo NY",p:98},{n:"Chicharrón Carnoso",p:88},{n:"Parmesan Grilled Cheese",p:89}],
   "Postres":[{n:"Cheesecake Clásico",p:125},{n:"Fried Oreos",p:95}],
@@ -792,7 +847,18 @@ const MENU = {
   "Cervezas Artesanales":[{n:"Suavecipa",p:100},{n:"Chelanga",p:100},{n:"Porteratzo",p:110},{n:"American Pale Ale",p:110}],
   "Cafés":[{n:"Americano",p:35},{n:"Cappuccino",p:45},{n:"Espresso",p:35}]
 };
-const EXTRAS=[{n:"Crispy onions",p:35},{n:"Extra carne",p:55},{n:"Puré de papa",p:35},{n:"Aguacate",p:55},{n:"Tocino extra",p:35},{n:"Chicharrón carnoso",p:50},{n:"Salsa de queso con tocino",p:38},{n:"Bolita de helado",p:30}];
+let EXTRAS=[{n:"Crispy onions",p:35},{n:"Extra carne",p:55},{n:"Puré de papa",p:35},{n:"Aguacate",p:55},{n:"Tocino extra",p:35},{n:"Chicharrón carnoso",p:50},{n:"Salsa de queso con tocino",p:38},{n:"Bolita de helado",p:30}];
+
+async function cargarMenuRemoto(){
+  try{
+    const r=await fetch('/api/menu');
+    const d=await r.json();
+    if(d.menu&&d.menu.categorias){
+      MENU=d.menu.categorias;
+      if(d.menu.extras&&d.menu.extras.length) EXTRAS=d.menu.extras;
+    }
+  }catch(e){/* fallback al menú hardcodeado */}
+}
 
 // ── MATERIA PRIMA — Config de insumos por producto ──
 // carne:    bolitas de 80g de res (smash) — unidades → kg automático
@@ -827,6 +893,7 @@ const MP={
 
 // ── ESTADO EN MEMORIA ──
 let currentItems=[], currentPago="Efectivo", editandoId=null, currentPropina=0, currentMixtoEf=0, currentMixtoTj=0;
+let _currentCatItems=[];
 let comandas=[], ventas=[], meseros=[], cancelaciones=[];
 let viewMode='mapa';
 let gerentesCache=[], gerenteCallback=null, gerenteCancelCallback=null;
@@ -1095,12 +1162,45 @@ function initMenu(){
   renderMeseroSelect();
 }
 function renderPlatillos(cat){
-  document.getElementById('platillosGrid').innerHTML=MENU[cat].map(item=>
-    `<button class="plato-btn" onclick='addItem(${JSON.stringify(item.n)},${item.p},${JSON.stringify(cat)})'><div class="plato-name">${item.n}</div><div class="plato-price">$${item.p}</div></button>`
-  ).join('');
+  _currentCatItems=(MENU[cat]||[]).filter(it=>it.activo!==false);
+  clearModsStrip();
+  document.getElementById('platillosGrid').innerHTML=_currentCatItems.length
+    ?_currentCatItems.map((item,i)=>`<button class="plato-btn" onclick='addPlato(${i})'><div class="plato-name">${item.n}</div><div class="plato-price">$${item.p}</div></button>`).join('')
+    :'<div style="color:#bbb;font-size:13px;padding:12px 0;">Sin ítems activos en esta categoría</div>';
+}
+function addPlato(idx){
+  const item=_currentCatItems[idx];
+  if(!item)return;
+  const cat=document.querySelector('.cat-btn.active')?.textContent||'';
+  addItem(item.n,item.p,cat);
+  const mods=(item.mods||[]).filter(m=>m.activo!==false&&m.n);
+  if(mods.length)renderModsStrip(item.n,mods);
+  else clearModsStrip();
+}
+function renderModsStrip(nombre,mods){
+  document.getElementById('modsStripTitle').textContent=nombre;
+  document.getElementById('modsStripGrid').innerHTML=mods.map(mod=>{
+    const label=mod.p>0
+      ?`<span style="font-weight:400;color:#555;">${mod.n}</span><span>+$${mod.p}</span>`
+      :`<span style="font-weight:500;color:#333;">${mod.n}</span>`;
+    return`<button class="extra-btn" onclick='addModItem(${JSON.stringify(mod.n)},${mod.p})'>${label}</button>`;
+  }).join('');
+  document.getElementById('modsStrip').style.display='block';
+}
+function clearModsStrip(){
+  document.getElementById('modsStrip').style.display='none';
+}
+function addModItem(nombre,precio){
+  if(precio>0){
+    addItem('+'+nombre,precio,'Extras');
+  }else{
+    // Mod gratuito: se agrega como nota al último ítem no cancelado
+    const last=[...currentItems].reverse().find(it=>!it.cancelado);
+    if(last){last.nota=last.nota?last.nota+', '+nombre:nombre;renderTicket();toast('↳ '+nombre+' ✓');}
+  }
 }
 function renderExtras(){
-  document.getElementById('extrasGrid').innerHTML=EXTRAS.map(ex=>
+  document.getElementById('extrasGrid').innerHTML=EXTRAS.filter(ex=>ex.activo!==false).map(ex=>
     `<button class="extra-btn" onclick='addItem(${JSON.stringify("+"+ex.n)},${ex.p},"Extras")'><span style="font-weight:400;color:#555;">${ex.n}</span><span>+$${ex.p}</span></button>`
   ).join('');
 }
@@ -2520,16 +2620,41 @@ function abrirModalNuevoProductoInv(){
   document.getElementById('nuevoIngNombre').value='';
   document.getElementById('nuevoIngMin').value='';
   document.getElementById('nuevoIngProv').value='';
-  document.getElementById('nuevoIngCat').value='barra';
   document.getElementById('nuevoIngUnidad').value='pzas';
+  document.getElementById('nuevoIngCatNueva').value='';
+  document.getElementById('nuevoIngCatNueva').style.display='none';
+  // Populate custom categories
+  const sel=document.getElementById('nuevoIngCat');
+  const baseOpts=['barra','cocina','abarrotes','limpieza','otro','__nueva__'];
+  // Remove previously added custom opts
+  [...sel.options].forEach(o=>{ if(!baseOpts.includes(o.value)) sel.remove(o.index); });
+  const customCats=[...new Set((inventario.customIngs||[]).map(i=>i.cat))]
+    .filter(c=>!['barra','cocina','abarrotes','limpieza','otro'].includes(c));
+  const nuevaOpt=sel.querySelector('option[value="__nueva__"]');
+  customCats.forEach(c=>{
+    const o=document.createElement('option');
+    o.value=c; o.textContent='• '+c.charAt(0).toUpperCase()+c.slice(1);
+    sel.insertBefore(o,nuevaOpt);
+  });
+  sel.value='barra';
 }
 function cerrarModalNuevoProductoInv(){
   document.getElementById('modalNuevoProductoInv').classList.remove('open');
 }
+function toggleNuevaCat(val){
+  const inp=document.getElementById('nuevoIngCatNueva');
+  inp.style.display=val==='__nueva__'?'block':'none';
+  if(val==='__nueva__') inp.focus();
+}
 function guardarNuevoProductoInv(){
   const nombre=document.getElementById('nuevoIngNombre').value.trim();
   if(!nombre){toast('⚠ Ingresa el nombre del producto');return;}
-  const cat=document.getElementById('nuevoIngCat').value.trim().toLowerCase()||'barra';
+  let catRaw=document.getElementById('nuevoIngCat').value;
+  if(catRaw==='__nueva__'){
+    catRaw=document.getElementById('nuevoIngCatNueva').value.trim();
+    if(!catRaw){toast('⚠ Escribe el nombre de la categoría');document.getElementById('nuevoIngCatNueva').focus();return;}
+  }
+  const cat=catRaw.toLowerCase().replace(/\s+/g,' ').trim()||'barra';
   const unidad=document.getElementById('nuevoIngUnidad').value||'pzas';
   const defMin=unidad==='kg'?parseFloat(document.getElementById('nuevoIngMin').value)||0:parseInt(document.getElementById('nuevoIngMin').value)||0;
   const prov=document.getElementById('nuevoIngProv').value.trim();
@@ -3133,6 +3258,9 @@ function renderAdmin(){
     ${cancTotal>0?`<div class="admin-kpi admin-kpi-red"><div class="akpi-label">Cancelaciones</div><div class="akpi-val">$${cancTotal.toLocaleString()}</div><div class="akpi-sub">${cFilt.length} evento${cFilt.length!==1?'s':''}</div></div>`:''}
   </div>`;
 
+  // ── LABOR ──
+  renderLaborWidget(total);
+
   // ── FOOD COST ──
   renderAdminFoodCost(vFilt);
 
@@ -3393,6 +3521,302 @@ function renderAdmin(){
 }
 
 // ── EXPORTAR DASHBOARD GERENCIAL ──
+// ── EDITOR DE MENÚ ──
+function togglePanelMenu(){
+  const card=document.getElementById('adminMenuCard');
+  const open=card.style.display!=='none';
+  card.style.display=open?'none':'block';
+  if(!open){renderMenuEditor();card.scrollIntoView({behavior:'smooth',block:'start'});}
+}
+function _menuItemRow(catId,it,idx){
+  const activo=it.activo!==false;
+  const nm=String(it.n||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+  const mods=it.mods||[];
+  const modsHtml=mods.map(m=>{
+    const mn=String(m.n||'').replace(/"/g,'&quot;');
+    return`<div class="mod-row" style="display:flex;align-items:center;gap:8px;padding:4px 12px 4px 28px;border-bottom:1px solid #f0f0f0;background:#fafafa;">
+      <input type="text" value="${mn}" placeholder="Nombre del modificador" style="flex:1;padding:4px 8px;border:1px solid #e0e0e0;border-radius:5px;font-size:12px;outline:none;min-width:0;" onfocus="this.style.borderColor='#0D2A5E'" onblur="this.style.borderColor='#e0e0e0'">
+      <span style="font-size:12px;color:#aaa;flex-shrink:0;">$</span>
+      <input type="number" value="${m.p||0}" min="0" step="1" style="width:58px;padding:4px 6px;border:1px solid #e0e0e0;border-radius:5px;font-size:12px;text-align:right;outline:none;" onfocus="this.style.borderColor='#0D2A5E'" onblur="this.style.borderColor='#e0e0e0'">
+      <button onclick="this.closest('.mod-row').remove()" style="background:none;border:none;color:#ddd;cursor:pointer;padding:0 2px;font-size:15px;flex-shrink:0;line-height:1;" onmouseover="this.style.color='#e24b4a'" onmouseout="this.style.color='#ddd'">✕</button>
+    </div>`;
+  }).join('');
+  const modsLabel=mods.length?`Mods (${mods.length})`:'⊕ Mods';
+  return`<div class="item-wrapper">
+  <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #f5f5f5;background:${activo?'#fff':'#fafafa'};">
+    <input type="text" value="${nm}" placeholder="Nombre del ítem" style="flex:1;padding:6px 10px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;outline:none;min-width:0;" onfocus="this.style.borderColor='#0D2A5E'" onblur="this.style.borderColor='#e0e0e0'">
+    <span style="font-size:13px;color:#aaa;flex-shrink:0;">$</span>
+    <input type="number" value="${it.p||0}" placeholder="0" min="0" step="1" style="width:72px;padding:6px 8px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;outline:none;text-align:right;" onfocus="this.style.borderColor='#0D2A5E'" onblur="this.style.borderColor='#e0e0e0'">
+    <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#666;cursor:pointer;white-space:nowrap;flex-shrink:0;user-select:none;">
+      <input type="checkbox" ${activo?'checked':''} style="cursor:pointer;width:14px;height:14px;"> Activo
+    </label>
+    <button onclick="_toggleMods(this)" style="font-size:11px;color:${mods.length?'#0D2A5E':'#aaa'};border:1px solid ${mods.length?'#0D2A5E':'#ddd'};background:${mods.length?'#f0f4ff':'#fafafa'};border-radius:5px;padding:3px 8px;cursor:pointer;flex-shrink:0;white-space:nowrap;">${modsLabel}</button>
+    <button onclick="this.closest('.item-wrapper').remove()" style="background:none;border:none;color:#ccc;font-size:18px;cursor:pointer;padding:0 2px;flex-shrink:0;line-height:1;" onmouseover="this.style.color='#e24b4a'" onmouseout="this.style.color='#ccc'">✕</button>
+  </div>
+  <div class="item-mods" style="display:${mods.length?'block':'none'};">
+    ${modsHtml}
+    <div style="padding:4px 12px 6px 28px;">
+      <button onclick="_addModRow(this)" style="font-size:11px;color:#888;border:1px dashed #ccc;background:transparent;border-radius:5px;padding:3px 10px;cursor:pointer;">＋ Modificador</button>
+    </div>
+  </div>
+</div>`;
+}
+function _toggleMods(btn){
+  const wrapper=btn.closest('.item-wrapper');
+  const ms=wrapper.querySelector('.item-mods');
+  const open=ms.style.display!=='none';
+  ms.style.display=open?'none':'block';
+  btn.style.color=open?'#aaa':'#0D2A5E';
+  btn.style.borderColor=open?'#ddd':'#0D2A5E';
+  btn.style.background=open?'#fafafa':'#f0f4ff';
+}
+function _addModRow(btn){
+  const ms=btn.closest('.item-mods');
+  const addBtn=btn.parentElement;
+  const row=document.createElement('div');
+  row.className='mod-row';
+  row.style.cssText='display:flex;align-items:center;gap:8px;padding:4px 12px 4px 28px;border-bottom:1px solid #f0f0f0;background:#fafafa;';
+  row.innerHTML=`<input type="text" placeholder="Nombre del modificador" style="flex:1;padding:4px 8px;border:1px solid #0D2A5E;border-radius:5px;font-size:12px;outline:none;min-width:0;"><span style="font-size:12px;color:#aaa;flex-shrink:0;">$</span><input type="number" value="0" min="0" step="1" style="width:58px;padding:4px 6px;border:1px solid #e0e0e0;border-radius:5px;font-size:12px;text-align:right;outline:none;"><button onclick="this.closest('.mod-row').remove()" style="background:none;border:none;color:#ddd;cursor:pointer;padding:0 2px;font-size:15px;flex-shrink:0;line-height:1;" onmouseover="this.style.color='#e24b4a'" onmouseout="this.style.color='#ddd'">✕</button>`;
+  ms.insertBefore(row,addBtn);
+  row.querySelector('input[type=text]').focus();
+}
+function renderMenuEditor(){
+  let html='';
+  Object.keys(MENU).forEach(cat=>{
+    const cid='mc_'+encodeURIComponent(cat).replace(/%/g,'x');
+    const items=MENU[cat].map((it,i)=>_menuItemRow(cid,it,i)).join('');
+    html+=`<div style="margin-bottom:18px;" data-menucat="${cat.replace(/"/g,'&quot;')}">
+      <div style="display:flex;justify-content:space-between;align-items:center;background:#f7f9ff;border:1px solid #dde4f5;border-radius:8px 8px 0 0;padding:8px 12px;">
+        <span style="font-size:13px;font-weight:700;color:#0D2A5E;">${cat}</span>
+        <button onclick="_addItemToMenuSec(this)" style="font-size:12px;color:#0D2A5E;border:1px solid #0D2A5E;background:transparent;border-radius:6px;padding:4px 10px;cursor:pointer;">＋ Ítem</button>
+      </div>
+      <div id="${cid}" style="border:1px solid #dde4f5;border-top:none;border-radius:0 0 8px 8px;min-height:36px;">${items}</div>
+    </div>`;
+  });
+  // Extras
+  const extItems=EXTRAS.map((ex,i)=>_menuItemRow('mc_extras',ex,i)).join('');
+  html+=`<div style="margin-bottom:18px;" data-menucat="__extras__">
+    <div style="display:flex;justify-content:space-between;align-items:center;background:#fff8ed;border:1px solid #f5d5a0;border-radius:8px 8px 0 0;padding:8px 12px;">
+      <span style="font-size:13px;font-weight:700;color:#b06800;">Extras / Toppings</span>
+      <button onclick="_addItemToMenuSec(this)" style="font-size:12px;color:#b06800;border:1px solid #b06800;background:transparent;border-radius:6px;padding:4px 10px;cursor:pointer;">＋ Extra</button>
+    </div>
+    <div id="mc_extras" style="border:1px solid #f5d5a0;border-top:none;border-radius:0 0 8px 8px;min-height:36px;">${extItems}</div>
+  </div>`;
+  document.getElementById('menuEditorContent').innerHTML=html;
+}
+function _addItemToMenuSec(btn){
+  const sec=btn.closest('[data-menucat]');
+  const container=sec.querySelector('[id^="mc_"]');
+  if(!container)return;
+  container.insertAdjacentHTML('beforeend',_menuItemRowNew());
+  container.querySelector('div:last-child input[type=text]').focus();
+}
+function _menuItemRowNew(){
+  return`<div class="item-wrapper">
+  <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #f5f5f5;background:#fff;">
+    <input type="text" placeholder="Nombre del ítem" style="flex:1;padding:6px 10px;border:1px solid #0D2A5E;border-radius:6px;font-size:13px;outline:none;min-width:0;">
+    <span style="font-size:13px;color:#aaa;flex-shrink:0;">$</span>
+    <input type="number" value="0" placeholder="0" min="0" step="1" style="width:72px;padding:6px 8px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;outline:none;text-align:right;">
+    <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#666;cursor:pointer;white-space:nowrap;flex-shrink:0;user-select:none;">
+      <input type="checkbox" checked style="cursor:pointer;width:14px;height:14px;"> Activo
+    </label>
+    <button onclick="_toggleMods(this)" style="font-size:11px;color:#aaa;border:1px solid #ddd;background:#fafafa;border-radius:5px;padding:3px 8px;cursor:pointer;flex-shrink:0;white-space:nowrap;">⊕ Mods</button>
+    <button onclick="this.closest('.item-wrapper').remove()" style="background:none;border:none;color:#ccc;font-size:18px;cursor:pointer;padding:0 2px;flex-shrink:0;line-height:1;" onmouseover="this.style.color='#e24b4a'" onmouseout="this.style.color='#ccc'">✕</button>
+  </div>
+  <div class="item-mods" style="display:none;">
+    <div style="padding:4px 12px 6px 28px;">
+      <button onclick="_addModRow(this)" style="font-size:11px;color:#888;border:1px dashed #ccc;background:transparent;border-radius:5px;padding:3px 10px;cursor:pointer;">＋ Modificador</button>
+    </div>
+  </div>
+</div>`;
+}
+function addMenuCat(){
+  const inp=document.getElementById('nuevaCatNombre');
+  const nombre=inp.value.trim();
+  if(!nombre)return;
+  if(MENU[nombre]){document.getElementById('menuEditorMsg').style.color='#e24b4a';document.getElementById('menuEditorMsg').textContent='Esa categoría ya existe';return;}
+  MENU[nombre]=[];
+  renderMenuEditor();
+  inp.value='';
+  document.getElementById('menuEditorMsg').textContent='';
+}
+function _leerMenuDesdeEditor(){
+  const categorias={};
+  document.querySelectorAll('#menuEditorContent [data-menucat]').forEach(sec=>{
+    const cat=sec.dataset.menucat;
+    if(cat==='__extras__')return;
+    const items=[];
+    sec.querySelectorAll('.item-wrapper').forEach(wrapper=>{
+      const mainRow=wrapper.querySelector('div');
+      const ins=mainRow.querySelectorAll('input');
+      if(ins.length<3)return;
+      const nombre=ins[0].value.trim();
+      const precio=parseFloat(ins[1].value)||0;
+      const activo=ins[2].checked;
+      if(!nombre)return;
+      const mods=[];
+      wrapper.querySelectorAll('.mod-row').forEach(modRow=>{
+        const mi=modRow.querySelectorAll('input');
+        if(mi.length<2)return;
+        const mn=mi[0].value.trim();
+        const mp=parseFloat(mi[1].value)||0;
+        if(mn)mods.push({n:mn,p:mp});
+      });
+      const obj={n:nombre,p:precio,activo};
+      if(mods.length)obj.mods=mods;
+      items.push(obj);
+    });
+    categorias[cat]=items;
+  });
+  const extras=[];
+  const extSec=document.querySelector('#menuEditorContent [data-menucat="__extras__"]');
+  if(extSec){
+    extSec.querySelectorAll('.item-wrapper').forEach(wrapper=>{
+      const mainRow=wrapper.querySelector('div');
+      const ins=mainRow.querySelectorAll('input');
+      if(ins.length<3)return;
+      const nombre=ins[0].value.trim();
+      const precio=parseFloat(ins[1].value)||0;
+      const activo=ins[2].checked;
+      if(nombre)extras.push({n:nombre,p:precio,activo});
+    });
+  }
+  return{categorias,extras};
+}
+function guardarMenuAdmin(){
+  const{categorias,extras}=_leerMenuDesdeEditor();
+  const cats=Object.keys(categorias);
+  const msg=document.getElementById('menuEditorMsg');
+  if(!cats.length||!cats.some(c=>categorias[c].length>0)){
+    msg.style.color='#e24b4a';msg.textContent='⚠ El menú debe tener al menos una categoría con un ítem.';return;
+  }
+  // Detectar cambios de activo para 86 log
+  const ts=Date.now();
+  const oldMap={};
+  Object.entries(MENU).forEach(([cat,items])=>items.forEach(it=>{oldMap[it.n]={activo:it.activo!==false,cat};}));
+  EXTRAS.forEach(ex=>{oldMap[ex.n]={activo:ex.activo!==false,cat:'Extras'};});
+  const log86=[];
+  const allNew=[
+    ...Object.entries(categorias).flatMap(([cat,items])=>items.map(it=>({...it,_cat:cat}))),
+    ...extras.map(ex=>({...ex,_cat:'Extras'}))
+  ];
+  allNew.forEach(it=>{
+    const old=oldMap[it.n];
+    const newActivo=it.activo!==false;
+    if(old&&old.activo!==newActivo){
+      log86.push({ts,item:it.n,cat:it._cat,action:newActivo?'on':'off'});
+    }
+  });
+  pedirPin('Guardar menú','Ingresa el PIN de administrador para aplicar los cambios',async(pin)=>{
+    const btn=document.getElementById('btnGuardarMenu');
+    btn.disabled=true;btn.textContent='Guardando...';msg.textContent='';
+    try{
+      const r=await fetch('/api/menu',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin,categorias,extras,log86})});
+      const d=await r.json();
+      if(!r.ok||!d.ok){msg.style.color='#e24b4a';msg.textContent=d.error||'Error al guardar';}
+      else{
+        MENU=categorias;EXTRAS=extras;
+        document.getElementById('catTabs').innerHTML='';
+        initMenu();
+        msg.style.color='#2d7a2d';msg.textContent='✓ Menú guardado y aplicado en todos los dispositivos.';
+        if(log86.length){msg.textContent+=' '+log86.length+' evento(s) registrado(s) en 86 log.';}
+        setTimeout(()=>msg.textContent='',5000);
+      }
+    }catch(e){msg.style.color='#e24b4a';msg.textContent='Error de conexión — reintenta';}
+    btn.disabled=false;btn.textContent='💾 Guardar cambios';
+  });
+}
+function togglePanel86(){
+  const card=document.getElementById('admin86Card');
+  const open=card.style.display!=='none';
+  card.style.display=open?'none':'block';
+  if(!open){cargar86Log();card.scrollIntoView({behavior:'smooth',block:'start'});}
+}
+async function cargar86Log(){
+  const el=document.getElementById('log86Content');
+  el.textContent='Cargando...';
+  try{
+    const r=await fetch('/api/86log');
+    const d=await r.json();
+    render86Log(d.entries||[]);
+  }catch(e){el.textContent='Error al cargar.';}
+}
+function render86Log(entries){
+  const el=document.getElementById('log86Content');
+  if(!entries.length){
+    el.innerHTML='<div style="color:#aaa;text-align:center;padding:20px 0;font-size:13px;">Sin eventos registrados — los cambios de activo se guardan aquí al editar el menú</div>';
+    return;
+  }
+  el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead><tr style="border-bottom:2px solid #eee;">
+      <th style="text-align:left;padding:6px 8px;color:#888;font-weight:600;">Fecha</th>
+      <th style="text-align:left;padding:6px 8px;color:#888;font-weight:600;">Ítem</th>
+      <th style="text-align:left;padding:6px 8px;color:#888;font-weight:600;">Categoría</th>
+      <th style="text-align:center;padding:6px 8px;color:#888;font-weight:600;">Estado</th>
+    </tr></thead>
+    <tbody>${entries.map(e=>{
+      const d=new Date(e.ts);
+      const fecha=d.toLocaleDateString('es-MX',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+      const tag=e.action==='off'
+        ?'<span style="background:#ffeaea;color:#e24b4a;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">86 — OFF</span>'
+        :'<span style="background:#eaffea;color:#2d7a2d;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">↑ Reactivado</span>';
+      return`<tr style="border-bottom:1px solid #f5f5f5;">
+        <td style="padding:6px 8px;color:#777;">${fecha}</td>
+        <td style="padding:6px 8px;font-weight:500;">${e.item}</td>
+        <td style="padding:6px 8px;color:#aaa;">${e.cat}</td>
+        <td style="padding:6px 8px;text-align:center;">${tag}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+// ── WIDGET LABOR (mano de obra del día) ──
+async function renderLaborWidget(ventasTotal){
+  const kpis=document.getElementById('laborKpis');
+  const det=document.getElementById('laborDetalle');
+  try{
+    const r=await fetch('/api/turno/hoy');
+    const d=await r.json();
+    const turnos=d.turnos||[];
+    if(!turnos.length){
+      kpis.innerHTML='<div style="grid-column:1/-1;color:#aaa;font-size:13px;padding:4px 0;">Sin registros hoy — <a href="/turnos" target="_blank" style="color:#0D2A5E;">configura empleados</a></div>';
+      det.innerHTML='';return;
+    }
+    const activos=turnos.filter(t=>!t.salida).length;
+    const completados=turnos.filter(t=>t.salida);
+    const costoTotal=turnos.reduce((s,t)=>s+(t.salarioDia||0),0);
+    const pct=ventasTotal>0&&costoTotal>0?((costoTotal/ventasTotal)*100).toFixed(1):null;
+    const horasTotal=completados.reduce((s,t)=>s+(t.minutos||0),0);
+    const fmtH=m=>{const h=Math.floor(m/60),mn=m%60;return h>0?`${h}h${mn>0?' '+mn+'m':''}`:m+'m';};
+    kpis.innerHTML=`
+      <div style="background:#f7f9ff;border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:20px;font-weight:700;color:#0D2A5E;">${turnos.length}</div>
+        <div style="font-size:11px;color:#aaa;margin-top:2px;">Empleados hoy</div>
+      </div>
+      <div style="background:#f7f9ff;border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:20px;font-weight:700;color:#f59e0b;">${activos}</div>
+        <div style="font-size:11px;color:#aaa;margin-top:2px;">En turno ahora</div>
+      </div>
+      <div style="background:#f7f9ff;border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:20px;font-weight:700;color:#0D2A5E;">${costoTotal>0?'$'+costoTotal.toLocaleString():'—'}</div>
+        <div style="font-size:11px;color:#aaa;margin-top:2px;">Costo labor</div>
+      </div>
+      <div style="background:${pct&&pct>30?'#fff5f5':pct&&pct>20?'#fffbe8':'#f0fff4'};border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:20px;font-weight:700;color:${pct&&pct>30?'#e24b4a':pct&&pct>20?'#b06800':'#16a34a'};">${pct?pct+'%':'—'}</div>
+        <div style="font-size:11px;color:#aaa;margin-top:2px;">% de ventas</div>
+      </div>`;
+    // Detalle: lista de quién está activo
+    const activosList=turnos.filter(t=>!t.salida).map(t=>t.nombre).join(', ');
+    const horasStr=completados.length?` · ${fmtH(horasTotal)} totales completadas`:'';
+    det.innerHTML=activosList
+      ?`<span style="color:#f59e0b;font-weight:600;">● En turno:</span> ${activosList}${horasStr}`
+      :'<span style="color:#16a34a;">Todos terminaron turno</span>'+horasStr;
+  }catch(e){
+    kpis.innerHTML='<div style="grid-column:1/-1;color:#aaa;font-size:13px;">Sin datos de turnos</div>';
+    det.innerHTML='';
+  }
+}
+
 function exportarDashboard(){
   const vFilt=getAdminVentas(),cFilt=getAdminCanc();
 
@@ -3962,7 +4386,7 @@ function renderInvAlertas(){
 document.getElementById('fechaHoy').textContent=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
 cargarInventario();
 cargarGerentes();
-initMenu();renderTicket();
+cargarMenuRemoto().then(()=>{initMenu();renderTicket();});
 cargarDatos().then(()=>{renderMeseroSelect();renderAbiertas();});
 cargarInvAlertas();
 setInterval(cargarInvAlertas, 300000); // revisar cada 5 min
